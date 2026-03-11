@@ -21,6 +21,11 @@ except ModuleNotFoundError:
         load_transactions,
     )
 
+try:
+    from src.llm_ollama import DEFAULT_OLLAMA_MODEL, generate_finance_advice
+except ModuleNotFoundError:
+    from llm_ollama import DEFAULT_OLLAMA_MODEL, generate_finance_advice
+
 
 app = FastAPI(title="Personal Finance Copilot API", version="0.1.0")
 DATA_PATH = "data/sample_bank_statement.csv"
@@ -64,3 +69,24 @@ def get_monthly_summary():
 def get_anomalies(multiplier: float = Query(default=2.0, ge=1.0, le=10.0)):
     df = get_prepared_data()
     return compute_anomalies(df, multiplier=multiplier)
+
+
+def build_ai_insight(model: str = DEFAULT_OLLAMA_MODEL):
+    df = get_prepared_data()
+    summary = compute_core_summary(df)
+    categories = compute_category_breakdown(df)
+    monthly = compute_monthly_summary(df)
+    anomalies = compute_anomalies(df)
+
+    return generate_finance_advice(
+        summary=summary,
+        categories=categories,
+        monthly=monthly,
+        anomalies=anomalies,
+        model=model,
+    )
+
+
+@app.get("/ai-insight")
+def get_ai_insight(model: str = Query(default=DEFAULT_OLLAMA_MODEL)):
+    return build_ai_insight(model=model)

@@ -143,3 +143,91 @@ git add .
 git commit -m "Step 5: add reusable finance engine and FastAPI endpoints"
 git push
 ```
+
+## Step 6: MCP server integration (AI can call your finance tools)
+
+In this step, we added an MCP server so an AI assistant can directly call your finance functions.
+
+### What we added
+- `src/mcp_server.py` with MCP tools:
+  - `health`
+  - `get_summary`
+  - `get_top_expenses`
+  - `get_categories`
+  - `get_monthly_summary`
+  - `get_anomalies`
+
+### Install/update dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Run MCP server locally
+
+```bash
+python src/mcp_server.py
+```
+
+### Next (optional): connect this MCP server in Cline MCP settings
+After this, we can register this server in your MCP settings JSON so tools become available in chat.
+
+## Git commands for Step 6
+
+```bash
+git add .
+git commit -m "Step 6: add MCP server exposing finance tools"
+git push
+```
+
+## Step 7: Ollama integration (free local AI advice)
+
+In this step, we added local AI support using Ollama.
+
+### What we added
+- `src/llm_ollama.py` (Ollama client helper)
+- API endpoint: `GET /ai-insight`
+- MCP tool: `get_ai_finance_advice`
+
+### Install Ollama (one-time)
+- Download: https://ollama.com/download
+
+### Start Ollama + pull a model
+
+```bash
+ollama serve
+ollama pull llama3.2:3b
+```
+
+### Test model quickly
+
+```bash
+ollama run llama3.2:3b
+```
+
+### Run your API and test AI endpoint
+
+```bash
+uvicorn src.api:app --reload
+```
+
+Open:
+- `http://127.0.0.1:8000/docs`
+- Try `GET /ai-insight`
+
+### Run MCP server and use AI advice tool
+
+```bash
+python src/mcp_server.py
+```
+
+Use tool:
+- `get_ai_finance_advice`
+
+## Git commands for Step 7
+
+```bash
+git add .
+git commit -m "Step 7: add Ollama-based AI finance advice in API and MCP"
+git push
+```
