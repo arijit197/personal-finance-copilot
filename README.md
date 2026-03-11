@@ -215,6 +215,17 @@ Open:
 - `http://127.0.0.1:8000/docs`
 - Try `GET /ai-insight`
 
+### Ask custom questions directly (Q&A)
+
+You can now ask direct questions from API:
+
+- Endpoint: `GET /ai-ask`
+- Required query param: `question`
+
+Example:
+
+`/ai-ask?question=How%20much%20did%20I%20spend%20on%20food%20and%20how%20can%20I%20reduce%20it%3F`
+
 ### Run MCP server and use AI advice tool
 
 ```bash
@@ -223,6 +234,7 @@ python src/mcp_server.py
 
 Use tool:
 - `get_ai_finance_advice`
+- `ask_ai_finance_question` (for custom question-based insights)
 
 ## Git commands for Step 7
 

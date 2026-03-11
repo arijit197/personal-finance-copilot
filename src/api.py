@@ -6,6 +6,7 @@ try:
         compute_anomalies,
         compute_category_breakdown,
         compute_core_summary,
+        compute_monthly_category_breakdown,
         compute_monthly_summary,
         compute_top_expenses,
         load_transactions,
@@ -16,15 +17,20 @@ except ModuleNotFoundError:
         compute_anomalies,
         compute_category_breakdown,
         compute_core_summary,
+        compute_monthly_category_breakdown,
         compute_monthly_summary,
         compute_top_expenses,
         load_transactions,
     )
 
 try:
-    from src.llm_ollama import DEFAULT_OLLAMA_MODEL, generate_finance_advice
+    from src.llm_ollama import (
+        DEFAULT_OLLAMA_MODEL,
+        answer_finance_question,
+        generate_finance_advice,
+    )
 except ModuleNotFoundError:
-    from llm_ollama import DEFAULT_OLLAMA_MODEL, generate_finance_advice
+    from llm_ollama import DEFAULT_OLLAMA_MODEL, answer_finance_question, generate_finance_advice
 
 
 app = FastAPI(title="Personal Finance Copilot API", version="0.1.0")
@@ -76,12 +82,33 @@ def build_ai_insight(model: str = DEFAULT_OLLAMA_MODEL):
     summary = compute_core_summary(df)
     categories = compute_category_breakdown(df)
     monthly = compute_monthly_summary(df)
+    monthly_categories = compute_monthly_category_breakdown(df)
     anomalies = compute_anomalies(df)
 
     return generate_finance_advice(
         summary=summary,
         categories=categories,
         monthly=monthly,
+        monthly_categories=monthly_categories,
+        anomalies=anomalies,
+        model=model,
+    )
+
+
+def build_ai_answer(question: str, model: str = DEFAULT_OLLAMA_MODEL):
+    df = get_prepared_data()
+    summary = compute_core_summary(df)
+    categories = compute_category_breakdown(df)
+    monthly = compute_monthly_summary(df)
+    monthly_categories = compute_monthly_category_breakdown(df)
+    anomalies = compute_anomalies(df)
+
+    return answer_finance_question(
+        question=question,
+        summary=summary,
+        categories=categories,
+        monthly=monthly,
+        monthly_categories=monthly_categories,
         anomalies=anomalies,
         model=model,
     )
@@ -90,3 +117,11 @@ def build_ai_insight(model: str = DEFAULT_OLLAMA_MODEL):
 @app.get("/ai-insight")
 def get_ai_insight(model: str = Query(default=DEFAULT_OLLAMA_MODEL)):
     return build_ai_insight(model=model)
+
+
+@app.get("/ai-ask")
+def ask_ai(
+    question: str = Query(..., description="Ask a custom finance question"),
+    model: str = Query(default=DEFAULT_OLLAMA_MODEL),
+):
+    return build_ai_answer(question=question, model=model)

@@ -96,6 +96,25 @@ def compute_monthly_summary(df: pd.DataFrame) -> list[dict]:
     ]
 
 
+def compute_monthly_category_breakdown(df: pd.DataFrame) -> list[dict]:
+    grouped = (
+        df[df["debit"] > 0]
+        .assign(month=df["date"].dt.to_period("M").astype(str))
+        .groupby(["month", "category"], as_index=False)["debit"]
+        .sum()
+        .sort_values(by=["month", "debit"], ascending=[True, False])
+    )
+
+    return [
+        {
+            "month": row["month"],
+            "category": row["category"],
+            "amount": float(row["debit"]),
+        }
+        for _, row in grouped.iterrows()
+    ]
+
+
 def compute_anomalies(df: pd.DataFrame, multiplier: float = 2.0) -> dict:
     debit_txns = df[df["debit"] > 0].copy()
     if debit_txns.empty:

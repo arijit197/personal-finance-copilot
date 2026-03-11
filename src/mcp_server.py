@@ -11,6 +11,7 @@ try:
         compute_anomalies,
         compute_category_breakdown,
         compute_core_summary,
+        compute_monthly_category_breakdown,
         compute_monthly_summary,
         compute_top_expenses,
         load_transactions,
@@ -21,15 +22,20 @@ except ModuleNotFoundError:
         compute_anomalies,
         compute_category_breakdown,
         compute_core_summary,
+        compute_monthly_category_breakdown,
         compute_monthly_summary,
         compute_top_expenses,
         load_transactions,
     )
 
 try:
-    from src.llm_ollama import DEFAULT_OLLAMA_MODEL, generate_finance_advice
+    from src.llm_ollama import (
+        DEFAULT_OLLAMA_MODEL,
+        answer_finance_question,
+        generate_finance_advice,
+    )
 except ModuleNotFoundError:
-    from llm_ollama import DEFAULT_OLLAMA_MODEL, generate_finance_advice
+    from llm_ollama import DEFAULT_OLLAMA_MODEL, answer_finance_question, generate_finance_advice
 
 
 DATA_PATH = "data/sample_bank_statement.csv"
@@ -94,12 +100,39 @@ def get_ai_finance_advice(
     summary = compute_core_summary(df)
     categories = compute_category_breakdown(df)
     monthly = compute_monthly_summary(df)
+    monthly_categories = compute_monthly_category_breakdown(df)
     anomalies = compute_anomalies(df)
 
     return generate_finance_advice(
         summary=summary,
         categories=categories,
         monthly=monthly,
+        monthly_categories=monthly_categories,
+        anomalies=anomalies,
+        model=model,
+    )
+
+
+@mcp.tool()
+def ask_ai_finance_question(
+    question: str,
+    model: str = DEFAULT_OLLAMA_MODEL,
+    data_path: str = DATA_PATH,
+) -> dict:
+    """Ask a direct custom question about finance data and get AI answer."""
+    df = _prepared_data(data_path)
+    summary = compute_core_summary(df)
+    categories = compute_category_breakdown(df)
+    monthly = compute_monthly_summary(df)
+    monthly_categories = compute_monthly_category_breakdown(df)
+    anomalies = compute_anomalies(df)
+
+    return answer_finance_question(
+        question=question,
+        summary=summary,
+        categories=categories,
+        monthly=monthly,
+        monthly_categories=monthly_categories,
         anomalies=anomalies,
         model=model,
     )
