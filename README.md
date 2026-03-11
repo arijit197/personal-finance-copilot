@@ -37,3 +37,35 @@ git add .
 git commit -m "Step 2: setup venv, sample CSV and analysis script"
 git push
 ```
+
+## Step 3: Auto-categorize transactions
+
+In this step, we added simple keyword rules to automatically classify expenses into categories like:
+- Food
+- Transport
+- Utilities
+- Shopping
+- Entertainment
+- Housing
+- Investment
+- Health
+- Cash
+
+### Run Step 3
+
+```bash
+python src/analyze_csv.py
+```
+
+Now output includes:
+- core money summary
+- top 5 expenses
+- category-wise spending breakdown
+
+## Git commands for Step 3
+
+```bash
+git add .
+git commit -m "Step 3: add transaction categorization and category-wise spending"
+git push
+```
