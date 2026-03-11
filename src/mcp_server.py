@@ -11,8 +11,10 @@ try:
         compute_anomalies,
         compute_category_breakdown,
         compute_core_summary,
+        forecast_next_month,
         compute_monthly_category_breakdown,
         compute_monthly_summary,
+        suggest_savings_target_plan,
         compute_top_expenses,
         load_transactions,
     )
@@ -22,8 +24,10 @@ except ModuleNotFoundError:
         compute_anomalies,
         compute_category_breakdown,
         compute_core_summary,
+        forecast_next_month,
         compute_monthly_category_breakdown,
         compute_monthly_summary,
+        suggest_savings_target_plan,
         compute_top_expenses,
         load_transactions,
     )
@@ -88,6 +92,28 @@ def get_anomalies(multiplier: float = 2.0, data_path: str = DATA_PATH) -> dict:
     safe_multiplier = min(max(multiplier, 1.0), 10.0)
     df = _prepared_data(data_path)
     return compute_anomalies(df, multiplier=safe_multiplier)
+
+
+@mcp.tool()
+def get_forecast(
+    income_growth_pct: float = 0.0,
+    data_path: str = DATA_PATH,
+) -> dict:
+    """Forecast next month income, expense, and savings (baseline method)."""
+    safe_growth = min(max(income_growth_pct, -100.0), 200.0)
+    df = _prepared_data(data_path)
+    return forecast_next_month(df, income_growth_pct=safe_growth)
+
+
+@mcp.tool()
+def get_savings_target_plan(
+    target_savings: float,
+    data_path: str = DATA_PATH,
+) -> dict:
+    """Suggest category-wise budget cuts to reach a target savings amount."""
+    safe_target = max(0.01, float(target_savings))
+    df = _prepared_data(data_path)
+    return suggest_savings_target_plan(df, target_savings=safe_target)
 
 
 @mcp.tool()

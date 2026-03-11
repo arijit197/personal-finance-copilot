@@ -115,6 +115,75 @@ def compute_monthly_category_breakdown(df: pd.DataFrame) -> list[dict]:
     ]
 
 
+def forecast_next_month(df: pd.DataFrame, income_growth_pct: float = 0.0) -> dict:
+    monthly = compute_monthly_summary(df)
+    if not monthly:
+        return {
+            "ok": False,
+            "error": "No monthly data available for forecasting.",
+        }
+
+    last_month = monthly[-1]
+    next_income = float(last_month["total_in"]) * (1 + income_growth_pct / 100.0)
+    next_expense = float(last_month["total_out"])
+    predicted_savings = next_income - next_expense
+
+    return {
+        "ok": True,
+        "last_month": last_month["month"],
+        "predicted_next_month_income": round(next_income, 2),
+        "predicted_next_month_expense": round(next_expense, 2),
+        "predicted_next_month_savings": round(predicted_savings, 2),
+        "assumptions": {
+            "income_growth_pct": income_growth_pct,
+            "expense_baseline_from_last_month": True,
+        },
+    }
+
+
+def suggest_savings_target_plan(df: pd.DataFrame, target_savings: float) -> dict:
+    summary = compute_core_summary(df)
+    categories = compute_category_breakdown(df)
+
+    current_income = float(summary["total_in"])
+    current_expense = float(summary["total_out"])
+    required_expense = current_income - target_savings
+    cut_needed = max(0.0, current_expense - required_expense)
+
+    if current_expense <= 0:
+        return {
+            "ok": False,
+            "error": "Cannot create savings plan because total expense is zero.",
+        }
+
+    plan = []
+    for item in categories:
+        category = str(item["category"])
+        amount = float(item["amount"])
+        share = amount / current_expense
+        suggested_cut = round(cut_needed * share, 2)
+        plan.append(
+            {
+                "category": category,
+                "current_amount": round(amount, 2),
+                "suggested_cut": suggested_cut,
+                "suggested_new_budget": round(max(0.0, amount - suggested_cut), 2),
+            }
+        )
+
+    plan.sort(key=lambda x: x["suggested_cut"], reverse=True)
+
+    return {
+        "ok": True,
+        "current_income": round(current_income, 2),
+        "current_expense": round(current_expense, 2),
+        "current_savings": round(current_income - current_expense, 2),
+        "target_savings": round(float(target_savings), 2),
+        "cut_needed": round(cut_needed, 2),
+        "suggested_category_plan": plan,
+    }
+
+
 def compute_anomalies(df: pd.DataFrame, multiplier: float = 2.0) -> dict:
     debit_txns = df[df["debit"] > 0].copy()
     if debit_txns.empty:

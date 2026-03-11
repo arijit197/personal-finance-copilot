@@ -243,3 +243,29 @@ git add .
 git commit -m "Step 7: add Ollama-based AI finance advice in API and MCP"
 git push
 ```
+
+## Step 8: Forecasting + savings target suggestions
+
+In this step, we added predictive planning features.
+
+### New API endpoints
+- `GET /forecast?income_growth_pct=0`
+  - Predicts next month income/expense/savings using last month baseline.
+- `GET /savings-plan?target_savings=55000`
+  - Suggests category-wise budget cuts to reach your target savings.
+
+### New MCP tools
+- `get_forecast`
+- `get_savings_target_plan`
+
+### Example questions
+- “How much might I save next month if income grows by 5%?”
+- “If I want to save ₹55,000, how much should I cut category-wise?”
+
+## Git commands for Step 8
+
+```bash
+git add .
+git commit -m "Step 8: add forecasting and savings target planning"
+git push
+```
