@@ -2,3 +2,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+frontend/node_modules/
+frontend/dist/
+finance_copilot.db

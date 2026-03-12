@@ -1,4 +1,8 @@
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
+
+from src.db import Base, engine
+from src.user_api import auth_router, user_router
 
 try:
     from src.finance_engine import (
@@ -39,6 +43,18 @@ except ModuleNotFoundError:
 
 app = FastAPI(title="Personal Finance Copilot API", version="0.1.0")
 DATA_PATH = "data/sample_bank_statement.csv"
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+Base.metadata.create_all(bind=engine)
+app.include_router(auth_router)
+app.include_router(user_router)
 
 
 def get_prepared_data():

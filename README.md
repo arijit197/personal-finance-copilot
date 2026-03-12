@@ -269,3 +269,151 @@ git add .
 git commit -m "Step 8: add forecasting and savings target planning"
 git push
 ```
+
+## Step 9: React UI dashboard (chat + forecast + savings plan)
+
+We added a React frontend in `frontend/` so you can use your project visually.
+
+### What it does
+- Ask custom question to AI (`/ai-ask`)
+- Show next month forecast (`/forecast`)
+- Show target-based savings cut plan (`/savings-plan`)
+
+### Run backend (Terminal 1)
+
+```bash
+cd /Users/arijidas/Documents/Project/some
+source .venv/bin/activate
+uvicorn src.api:app --reload
+```
+
+### Run frontend (Terminal 2)
+
+```bash
+cd /Users/arijidas/Documents/Project/some/frontend
+npm install
+npm run dev
+```
+
+Open UI:
+- `http://127.0.0.1:5173`
+
+## Git commands for Step 9
+
+```bash
+git add .
+git commit -m "Step 9: add React dashboard for AI Q&A, forecast, and savings plan"
+git push
+```
+
+## Step 10: Local auth + user history + reports + CSV/Text ingestion
+
+This step upgrades the app into a real multi-user product flow.
+
+### Added backend features
+- Local auth (email/password + JWT)
+  - `POST /auth/register`
+  - `POST /auth/login`
+- User profile/settings
+  - `GET /user/me`
+  - `GET /user/settings`
+  - `PUT /user/settings`
+- User transaction history
+  - `GET /user/transactions`
+  - `DELETE /user/transactions`
+- Ingestion
+  - `POST /user/upload-csv`
+  - `POST /user/upload-text` (paste statement text)
+- User-scoped analytics and AI
+  - `/user/summary`, `/user/categories`, `/user/monthly`, `/user/top-expenses`, `/user/anomalies`
+  - `/user/forecast`, `/user/savings-plan`
+  - `/user/ai-insight`, `/user/ai-ask`
+- Reports
+  - `GET /user/reports/transactions.csv`
+  - `GET /user/reports/summary.pdf`
+
+### Added frontend features
+- Login/Register screen
+- Token-based session storage (localStorage)
+- Upload CSV
+- Paste statement text and parse transactions
+- User settings (target savings, growth %, model)
+- Download CSV/PDF reports
+- View user transaction history
+- Run AI + forecast + savings plan on user data
+
+### Run full project
+
+Terminal 1 (Ollama):
+```bash
+ollama serve
+ollama pull llama3.2:3b
+```
+
+Terminal 2 (Backend):
+```bash
+cd /Users/arijidas/Documents/Project/some
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn src.api:app --reload
+```
+
+Terminal 3 (Frontend):
+```bash
+cd /Users/arijidas/Documents/Project/some/frontend
+npm install
+npm run dev
+```
+
+Open UI: `http://127.0.0.1:5173`
+
+## Git commands for Step 10
+
+```bash
+git add .
+git commit -m "Step 10: add local auth, user history, CSV + text ingestion, settings, and reports"
+git push
+```
+
+
+## Step 11: Quick testing with demo files (CSV + Text)
+
+We added ready-to-use demo files:
+- `data/demo_upload_transactions.csv`
+- `data/demo_upload_statement_text.txt`
+
+### Run web app
+
+Terminal 1 (Backend):
+```bash
+cd /Users/arijidas/Documents/Project/some
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn src.api:app --reload
+```
+
+Terminal 2 (Frontend):
+```bash
+cd /Users/arijidas/Documents/Project/some/frontend
+npm install
+npm run dev
+```
+
+Open:
+- `http://127.0.0.1:5173`
+
+### Test in UI
+
+1. Register/login in UI.
+2. Upload CSV using `data/demo_upload_transactions.csv`.
+3. Open `data/demo_upload_statement_text.txt`, copy all lines, paste into text box, click **Upload Text**.
+4. Check summary, history table, forecast and AI insights.
+
+### Optional API test (upload text directly)
+
+```bash
+curl -X POST "http://127.0.0.1:8000/user/upload-text" \
+  -H "Authorization: Bearer <YOUR_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d @<(jq -Rs '{text: .}' /Users/arijidas/Documents/Project/some/data/demo_upload_statement_text.txt)
+```
