@@ -1,14 +1,20 @@
 import io
+import os
 import re
 from datetime import datetime
+from xml.sax.saxutils import escape
 
 import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from reportlab.lib import colors
 from pydantic import BaseModel, EmailStr
 from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from sqlalchemy.orm import Session
 
 from src.auth import (
@@ -309,51 +315,288 @@ def _parse_statement_text_to_df(text: str) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
-def _render_summary_pdf(summary: dict, monthly: list[dict], categories: list[dict]) -> bytes:
+def _format_inr(value: float | int) -> str:
+    return f"₹{float(value):,.2f}"
+
+
+def _get_pdf_fonts() -> tuple[str, str]:
+    regular_font = "Helvetica"
+    bold_font = "Helvetica-Bold"
+
+    regular_path = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
+    bold_path = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+
+    if os.path.exists(regular_path):
+        if "ArialUnicode" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("ArialUnicode", regular_path))
+        regular_font = "ArialUnicode"
+
+    if os.path.exists(bold_path):
+        if "ArialBold" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("ArialBold", bold_path))
+        bold_font = "ArialBold"
+
+    return regular_font, bold_font
+
+
+def _render_summary_pdf(report: dict) -> bytes:
     buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    y = 800
+    regular_font, bold_font = _get_pdf_fonts()
 
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(40, y, "Personal Finance Copilot - Summary Report")
-    y -= 28
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=28,
+        rightMargin=28,
+        topMargin=32,
+        bottomMargin=24,
+        title="Personal Finance Copilot Report",
+    )
 
-    c.setFont("Helvetica", 11)
-    c.drawString(40, y, f"Total In: ₹{summary.get('total_in', 0):,.2f}")
-    y -= 18
-    c.drawString(40, y, f"Total Out: ₹{summary.get('total_out', 0):,.2f}")
-    y -= 18
-    c.drawString(40, y, f"Net Savings: ₹{summary.get('net_savings', 0):,.2f}")
-    y -= 28
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "report_title",
+        parent=styles["Heading1"],
+        fontName=bold_font,
+        fontSize=18,
+        leading=22,
+        textColor=colors.HexColor("#0f172a"),
+        spaceAfter=6,
+    )
+    subtitle_style = ParagraphStyle(
+        "report_subtitle",
+        parent=styles["Normal"],
+        fontName=regular_font,
+        fontSize=9,
+        textColor=colors.HexColor("#64748b"),
+        spaceAfter=14,
+    )
+    section_style = ParagraphStyle(
+        "report_section",
+        parent=styles["Heading3"],
+        fontName=bold_font,
+        fontSize=12,
+        textColor=colors.HexColor("#1d4ed8"),
+        spaceBefore=10,
+        spaceAfter=6,
+    )
+    body_style = ParagraphStyle(
+        "report_body",
+        parent=styles["Normal"],
+        fontName=regular_font,
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor("#0f172a"),
+    )
+    meta_style = ParagraphStyle(
+        "report_meta",
+        parent=styles["Normal"],
+        fontName=bold_font,
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor("#1e293b"),
+        spaceAfter=4,
+    )
+    advice_item_style = ParagraphStyle(
+        "report_advice_item",
+        parent=styles["Normal"],
+        fontName=bold_font,
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor("#0f172a"),
+        leftIndent=8,
+        spaceAfter=4,
+    )
 
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(40, y, "Monthly Summary")
-    y -= 18
-    c.setFont("Helvetica", 10)
-    for row in monthly[:12]:
-        c.drawString(
-            40,
-            y,
-            f"{row['month']}: In ₹{row['total_in']:,.2f} | Out ₹{row['total_out']:,.2f} | Net ₹{row['net_savings']:,.2f}",
+    summary = report.get("summary", {})
+    monthly = report.get("monthly", [])
+    categories = report.get("categories", [])
+    top_expenses = report.get("top_expenses", [])
+    anomalies = report.get("anomalies", [])
+    forecast = report.get("forecast", {})
+    savings_plan = report.get("savings_plan", {})
+    ai_advice = str(report.get("ai_advice", "")).strip()
+    user_name = str(report.get("user_name", "") or "N/A")
+    user_email = str(report.get("user_email", "") or "N/A")
+
+    story = []
+    story.append(Paragraph("Personal Finance Copilot — Full Finance Report", title_style))
+    story.append(
+        Paragraph(
+            f"Generated on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+            subtitle_style,
         )
-        y -= 15
-        if y < 80:
-            c.showPage()
-            y = 800
+    )
+    story.append(
+        Paragraph(
+            f"Name of User - {escape(user_name)}",
+            meta_style,
+        )
+    )
+    story.append(
+        Paragraph(
+            f"Email ID of User - {escape(user_email)}",
+            meta_style,
+        )
+    )
 
-    y -= 8
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(40, y, "Top Categories")
-    y -= 18
-    c.setFont("Helvetica", 10)
-    for row in categories[:10]:
-        c.drawString(40, y, f"{row['category']}: ₹{row['amount']:,.2f}")
-        y -= 15
-        if y < 80:
-            c.showPage()
-            y = 800
+    summary_table = Table(
+        [
+            ["Total In", "Total Out", "Net Savings"],
+            [
+                _format_inr(summary.get("total_in", 0)),
+                _format_inr(summary.get("total_out", 0)),
+                _format_inr(summary.get("net_savings", 0)),
+            ],
+        ],
+        colWidths=[170, 170, 170],
+    )
+    summary_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1d4ed8")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), bold_font),
+                ("FONTNAME", (0, 1), (-1, 1), regular_font),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                ("TOPPADDING", (0, 1), (-1, 1), 8),
+                ("BOTTOMPADDING", (0, 1), (-1, 1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#bfdbfe")),
+            ]
+        )
+    )
+    story.append(summary_table)
 
-    c.save()
+    story.append(Paragraph("Monthly Performance", section_style))
+    monthly_rows = [["Month", "Income", "Expense", "Net"]]
+    for row in monthly[:12]:
+        monthly_rows.append(
+            [
+                str(row.get("month", "")),
+                _format_inr(row.get("total_in", 0)),
+                _format_inr(row.get("total_out", 0)),
+                _format_inr(row.get("net_savings", 0)),
+            ]
+        )
+    monthly_table = Table(monthly_rows, colWidths=[120, 130, 130, 130])
+    monthly_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e0e7ff")),
+                ("FONTNAME", (0, 0), (-1, 0), bold_font),
+                ("FONTNAME", (0, 1), (-1, -1), regular_font),
+                ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cbd5e1")),
+                ("FONTSIZE", (0, 0), (-1, -1), 8.7),
+                ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+            ]
+        )
+    )
+    story.append(monthly_table)
+
+    story.append(Paragraph("Category Spend Breakdown", section_style))
+    category_lines = [
+        f"• {escape(str(row.get('category', 'Other')))} — {_format_inr(row.get('amount', 0))}"
+        for row in categories[:10]
+    ]
+    if not category_lines:
+        category_lines = ["• No category data available."]
+    for line in category_lines:
+        story.append(Paragraph(line, body_style))
+
+    story.append(Paragraph("Top Expenses", section_style))
+    if top_expenses:
+        for item in top_expenses[:8]:
+            text = (
+                f"• {escape(str(item.get('date', 'N/A')))} | "
+                f"{escape(str(item.get('description', '')))} | {_format_inr(item.get('amount', 0))}"
+            )
+            story.append(Paragraph(text, body_style))
+    else:
+        story.append(Paragraph("• No expense data available.", body_style))
+
+    story.append(Paragraph("Anomaly Alerts", section_style))
+    if anomalies:
+        for item in anomalies[:8]:
+            text = (
+                f"• {escape(str(item.get('category', 'Other')))} | "
+                f"{escape(str(item.get('description', '')))} | {_format_inr(item.get('amount', 0))}"
+            )
+            story.append(Paragraph(text, body_style))
+    else:
+        story.append(Paragraph("• No unusual transactions detected.", body_style))
+
+    story.append(Paragraph("Forecast", section_style))
+    if forecast.get("ok"):
+        story.append(
+            Paragraph(
+                (
+                    f"Based on {escape(str(forecast.get('last_month', 'latest month')))}: "
+                    f"Income {_format_inr(forecast.get('predicted_next_month_income', 0))}, "
+                    f"Expense {_format_inr(forecast.get('predicted_next_month_expense', 0))}, "
+                    f"Savings {_format_inr(forecast.get('predicted_next_month_savings', 0))}."
+                ),
+                body_style,
+            )
+        )
+    else:
+        story.append(Paragraph("Forecast unavailable for current data.", body_style))
+
+    story.append(Paragraph("Savings Plan", section_style))
+    if savings_plan.get("ok"):
+        story.append(
+            Paragraph(
+                (
+                    f"Target {_format_inr(savings_plan.get('target_savings', 0))}, "
+                    f"Current {_format_inr(savings_plan.get('current_savings', 0))}, "
+                    f"Suggested cut {_format_inr(savings_plan.get('cut_needed', 0))}."
+                ),
+                body_style,
+            )
+        )
+        for row in savings_plan.get("suggested_category_plan", [])[:6]:
+            story.append(
+                Paragraph(
+                    (
+                        f"• {escape(str(row.get('category', 'Other')))}: "
+                        f"Cut {_format_inr(row.get('suggested_cut', 0))}, "
+                        f"new budget {_format_inr(row.get('suggested_new_budget', 0))}"
+                    ),
+                    body_style,
+                )
+            )
+    else:
+        story.append(Paragraph("Savings plan unavailable for current data.", body_style))
+
+    story.append(Paragraph("AI Advice", section_style))
+    cleaned_lines = [ln.strip() for ln in (ai_advice or "").splitlines() if ln.strip()]
+    top_three = []
+    for line in cleaned_lines:
+        line_no_md = re.sub(r"\*\*(.*?)\*\*", r"\1", line)
+        line_no_bullet = re.sub(r"^[\-•\d\.)\s]+", "", line_no_md).strip()
+        if line_no_bullet:
+            top_three.append(line_no_bullet)
+        if len(top_three) == 3:
+            break
+
+    if top_three:
+        story.append(Paragraph("Top 3 Advice", section_style))
+        for idx, line in enumerate(top_three, start=1):
+            story.append(Paragraph(f"Advice {idx}: {escape(line)}", advice_item_style))
+
+    advice = escape(ai_advice or "AI advice is unavailable right now.")
+    advice = advice.replace("**", "").replace("\n", "<br/>")
+    story.append(Paragraph(advice, body_style))
+    story.append(Spacer(1, 10))
+    story.append(
+        Paragraph(
+            "Tip: Re-run this report monthly to compare trends and track savings progress.",
+            subtitle_style,
+        )
+    )
+
+    doc.build(story)
     buffer.seek(0)
     return buffer.read()
 
@@ -672,10 +915,56 @@ def user_transactions_csv(current_user: User = Depends(get_current_user), db: Se
 @user_router.get("/reports/summary.pdf")
 def user_summary_pdf(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     df = _get_user_df_or_400(db, current_user)
+    settings = _ensure_user_settings(db, current_user)
+
     summary = compute_core_summary(df)
     monthly = compute_monthly_summary(df)
     categories = compute_category_breakdown(df)
-    pdf_bytes = _render_summary_pdf(summary, monthly, categories)
+    monthly_categories = compute_monthly_category_breakdown(df)
+    top_expenses = compute_top_expenses(df, limit=8)
+    anomalies_payload = compute_anomalies(df)
+
+    income_growth_pct = settings.default_income_growth_pct if settings.default_income_growth_pct is not None else 5.0
+    forecast = forecast_next_month(df, income_growth_pct=income_growth_pct)
+
+    default_target = summary.get("net_savings", 0.0) + 10000.0
+    if default_target <= 0:
+        default_target = 10000.0
+    target_savings = (
+        settings.default_target_savings
+        if settings.default_target_savings is not None and settings.default_target_savings > 0
+        else default_target
+    )
+    savings_plan = suggest_savings_target_plan(df, target_savings=float(target_savings))
+
+    selected_model = settings.ollama_model or DEFAULT_OLLAMA_MODEL
+    ai_payload = generate_finance_advice(
+        summary=summary,
+        categories=categories,
+        monthly=monthly,
+        monthly_categories=monthly_categories,
+        anomalies=anomalies_payload,
+        model=selected_model,
+    )
+    ai_advice = (
+        ai_payload.get("advice")
+        if ai_payload.get("ok")
+        else f"AI advice unavailable: {ai_payload.get('error', 'Unknown issue')}"
+    )
+
+    report_payload = {
+        "user_name": current_user.full_name or "N/A",
+        "user_email": current_user.email,
+        "summary": summary,
+        "monthly": monthly,
+        "categories": categories,
+        "top_expenses": top_expenses,
+        "anomalies": anomalies_payload.get("anomalies", []),
+        "forecast": forecast,
+        "savings_plan": savings_plan,
+        "ai_advice": ai_advice,
+    }
+    pdf_bytes = _render_summary_pdf(report_payload)
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",

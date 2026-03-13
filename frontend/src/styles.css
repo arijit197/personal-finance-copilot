@@ -17,6 +17,15 @@ body {
   min-height: 100vh;
 }
 
+.app-shell {
+  min-height: 100vh;
+  background-image:
+    linear-gradient(140deg, rgba(219, 234, 254, 0.65), rgba(224, 231, 255, 0.7)),
+    url('https://images.unsplash.com/photo-1556741533-6e6a62bd8b49?auto=format&fit=crop&w=1800&q=80');
+  background-size: cover;
+  background-attachment: fixed;
+}
+
 .page {
   max-width: 1100px;
   margin: 0 auto;
@@ -28,6 +37,112 @@ body {
   display: grid;
   place-items: center;
   padding: 24px;
+  position: relative;
+  background-image:
+    linear-gradient(120deg, rgba(15, 23, 42, 0.68), rgba(30, 41, 59, 0.45)),
+    url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1800&q=80');
+  background-size: cover;
+  background-position: center;
+}
+
+.auth-layout {
+  width: min(980px, 100%);
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.auth-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 26px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.auth-copy h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.auth-copy p {
+  margin: 10px 0 14px;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.auth-copy ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #475569;
+  display: grid;
+  gap: 8px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  align-self: center;
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.auth-card h2 {
+  margin: 0 0 8px;
+}
+
+.auth-subtitle {
+  margin-top: 0;
+  margin-bottom: 16px;
+  line-height: 1.45;
+}
+
+.auth-card form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-card form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.auth-card form input {
+  width: 100%;
+}
+
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap input {
+  padding-right: 44px;
+}
+
+.auth-card form button {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.show-password-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  color: #334155;
+  font-weight: 500;
+  font-size: 0.88rem;
+}
+
+.show-password-line input {
+  width: auto !important;
+  margin: 0;
+  accent-color: #2563eb;
 }
 
 .auth-hero {
@@ -89,7 +204,7 @@ header p {
 }
 
 .metric-card {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5ff 100%);
   border: 1px solid #dbeafe;
   border-radius: 12px;
   padding: 12px;
@@ -133,14 +248,27 @@ header p {
   gap: 14px;
 }
 
-.nav-links a {
+.nav-links a,
+.nav-tab {
   text-decoration: none;
   color: #cbd5e1;
   font-size: 0.9rem;
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-weight: 600;
 }
 
-.nav-links a:hover {
+.nav-links a:hover,
+.nav-tab:hover {
   color: #fff;
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.nav-tab.active {
+  color: #fff;
+  background: rgba(59, 130, 246, 0.35);
 }
 
 .nav-user {
@@ -158,12 +286,142 @@ header p {
   margin-bottom: 12px;
 }
 
+.chart-card h3 {
+  margin: 0 0 12px;
+}
+
+.bar-chart-list {
+  display: grid;
+  gap: 10px;
+}
+
+.bar-chart-row {
+  display: grid;
+  gap: 6px;
+}
+
+.bar-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.bar-chart-header span {
+  color: #334155;
+}
+
+.bar-chart-header strong {
+  color: #0f172a;
+}
+
+.bar-track {
+  width: 100%;
+  background: #e2e8f0;
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.monthly-bars {
+  display: grid;
+  gap: 12px;
+}
+
+.monthly-row {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 8px 10px;
+  align-items: center;
+}
+
+.monthly-label {
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.84rem;
+}
+
+.monthly-track {
+  display: grid;
+  gap: 5px;
+}
+
+.income-bar,
+.expense-bar {
+  height: 9px;
+  border-radius: 999px;
+  min-width: 2%;
+}
+
+.income-bar {
+  background: linear-gradient(90deg, #16a34a, #4ade80);
+}
+
+.expense-bar {
+  background: linear-gradient(90deg, #ef4444, #f97316);
+}
+
+.monthly-values {
+  grid-column: 2;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.insights-grid {
+  margin-top: 2px;
+}
+
+.insight-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.insight-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.insight-list li div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.insight-list li span {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.insight-list li b {
+  color: #0f172a;
+  white-space: nowrap;
+}
+
 textarea,
-input {
+input,
+select {
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   padding: 10px;
   font-size: 0.95rem;
+  background: #fff;
 }
 
 textarea {
@@ -174,6 +432,39 @@ textarea {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.upload-card-lite {
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 12px;
+  background: linear-gradient(180deg, #f8fbff, #f1f5ff);
+  display: grid;
+  gap: 10px;
+}
+
+.upload-card-lite h4 {
+  margin: 0;
+  color: #1e3a8a;
+}
+
+.upload-card-lite .muted {
+  margin: 0;
+}
+
+.settings-note {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
 }
 
 form {
@@ -197,6 +488,39 @@ button {
 
 .danger-btn {
   background: #b91c1c;
+}
+
+.password-wrap .password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  padding: 0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.password-wrap .password-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.password-wrap .password-toggle:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.password-wrap .password-toggle:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
 }
 
 .link-btn {
@@ -266,6 +590,14 @@ button:disabled {
 }
 
 @media (max-width: 900px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-card {
+    max-width: 100%;
+  }
+
   .metrics-grid {
     grid-template-columns: 1fr;
   }
@@ -277,7 +609,24 @@ button:disabled {
   .nav-links {
     order: 3;
     width: 100%;
-    justify-content: space-between;
+    justify-content: space-around;
+    flex-wrap: wrap;
+  }
+
+  .monthly-row {
+    grid-template-columns: 1fr;
+  }
+
+  .monthly-values {
+    grid-column: 1;
+  }
+
+  .upload-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-form {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -314,4 +663,72 @@ pre {
 .error-text {
   color: #dc2626;
   margin-top: 10px;
+}
+
+.success-text {
+  color: #15803d;
+  margin-top: 10px;
+}
+
+.input-hint {
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.ai-chat-card {
+  display: grid;
+  gap: 12px;
+}
+
+.chat-window {
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  min-height: 320px;
+  max-height: 460px;
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+}
+
+.chat-bubble {
+  max-width: 85%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.chat-bubble p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}
+
+.chat-bubble.user {
+  justify-self: end;
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.chat-bubble.assistant {
+  justify-self: start;
+  background: #ffffff;
+}
+
+.chat-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.chat-form button {
+  width: auto;
+}
+
+.about-card h1 {
+  margin-top: 0;
+}
+
+.about-card p {
+  line-height: 1.6;
 }
