@@ -133,6 +133,139 @@ def _extract_year_month(question: str, monthly: list[dict]) -> str | None:
     return f"{year}-{detected_month_num}"
 
 
+def _is_monthly_summary_question(question: str) -> bool:
+    q = question.lower()
+    summary_signals = [
+        "total in",
+        "total out",
+        "net saving",
+        "net savings",
+        "income and expense",
+        "income & expense",
+        "month summary",
+        "monthly summary",
+    ]
+    return any(sig in q for sig in summary_signals)
+
+
+def _is_monthly_overview_question(question: str) -> bool:
+    q = question.lower()
+    overview_signals = [
+        "monthly expense",
+        "month expense",
+        "expense of",
+        "whole data of",
+        "complete data of",
+        "for july",
+        "for august",
+        "for september",
+        "for october",
+        "for november",
+        "for december",
+        "for january",
+        "for february",
+        "for march",
+        "for april",
+        "for may",
+        "for june",
+    ]
+    return any(sig in q for sig in overview_signals)
+
+
+def _maybe_answer_monthly_summary_question(
+    question: str,
+    monthly: list[dict],
+    model: str,
+) -> dict | None:
+    if not _is_monthly_summary_question(question):
+        return None
+
+    year_month = _extract_year_month(question, monthly)
+    if not year_month:
+        return None
+
+    row = next((r for r in monthly if str(r.get("month")) == year_month), None)
+    if not row:
+        return {
+            "ok": True,
+            "model": model,
+            "base_url": DEFAULT_OLLAMA_BASE_URL,
+            "advice": f"I could not find monthly summary data for {year_month}.",
+            "question": question,
+            "source": "rule-based",
+        }
+
+    total_in = float(row.get("total_in", 0.0))
+    total_out = float(row.get("total_out", 0.0))
+    net = float(row.get("net_savings", total_in - total_out))
+
+    return {
+        "ok": True,
+        "model": model,
+        "base_url": DEFAULT_OLLAMA_BASE_URL,
+        "advice": (
+            f"Monthly summary for {year_month}:\n"
+            f"- Total In: ₹{total_in:,.2f}\n"
+            f"- Total Out: ₹{total_out:,.2f}\n"
+            f"- Net Savings: ₹{net:,.2f}"
+        ),
+        "question": question,
+        "source": "rule-based",
+    }
+
+
+def _maybe_answer_monthly_overview_question(
+    question: str,
+    monthly: list[dict],
+    monthly_categories: list[dict],
+    model: str,
+) -> dict | None:
+    if not _is_monthly_overview_question(question):
+        return None
+
+    year_month = _extract_year_month(question, monthly)
+    if not year_month:
+        return None
+
+    row = next((r for r in monthly if str(r.get("month")) == year_month), None)
+    if not row:
+        return {
+            "ok": True,
+            "model": model,
+            "base_url": DEFAULT_OLLAMA_BASE_URL,
+            "advice": f"I could not find monthly data for {year_month}.",
+            "question": question,
+            "source": "rule-based",
+        }
+
+    total_in = float(row.get("total_in", 0.0))
+    total_out = float(row.get("total_out", 0.0))
+    net = float(row.get("net_savings", total_in - total_out))
+
+    cat_rows = [r for r in monthly_categories if str(r.get("month")) == year_month]
+    cat_rows = sorted(cat_rows, key=lambda x: float(x.get("amount", 0.0)), reverse=True)[:3]
+
+    lines = [
+        f"Monthly overview for {year_month}:",
+        f"- Total In: ₹{total_in:,.2f}",
+        f"- Total Out: ₹{total_out:,.2f}",
+        f"- Net Savings: ₹{net:,.2f}",
+    ]
+    if cat_rows:
+        lines.append("Top spend categories:")
+        for r in cat_rows:
+            lines.append(f"- {r.get('category', 'Other')}: ₹{float(r.get('amount', 0.0)):,.2f}")
+
+    return {
+        "ok": True,
+        "model": model,
+        "base_url": DEFAULT_OLLAMA_BASE_URL,
+        "advice": "\n".join(lines),
+        "question": question,
+        "source": "rule-based",
+    }
+
+
 def _maybe_answer_monthly_category_question(
     question: str,
     monthly: list[dict],
@@ -203,7 +336,7 @@ def ask_ollama(prompt: str, model: str = DEFAULT_OLLAMA_MODEL) -> dict:
                 "base_url": DEFAULT_OLLAMA_BASE_URL,
                 "advice": content,
             }
-    except urllib.error.URLError as exc:
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
         return {
             "ok": False,
             "model": model,
@@ -262,6 +395,23 @@ def answer_finance_question(
     )
     if quick_answer is not None:
         return quick_answer
+
+    monthly_overview_answer = _maybe_answer_monthly_overview_question(
+        question=clean_question,
+        monthly=monthly,
+        monthly_categories=monthly_categories,
+        model=model,
+    )
+    if monthly_overview_answer is not None:
+        return monthly_overview_answer
+
+    month_summary_answer = _maybe_answer_monthly_summary_question(
+        question=clean_question,
+        monthly=monthly,
+        model=model,
+    )
+    if month_summary_answer is not None:
+        return month_summary_answer
 
     prompt = _build_finance_question_prompt(
         question=clean_question,
