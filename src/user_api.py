@@ -11,6 +11,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from reportlab.lib import colors
 from pydantic import BaseModel, EmailStr
 from reportlab.lib.pagesizes import A4
+from reportlab.graphics.charts.piecharts import Pie
+from reportlab.graphics.shapes import Drawing
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -316,7 +318,116 @@ def _parse_statement_text_to_df(text: str) -> pd.DataFrame:
 
 
 def _format_inr(value: float | int) -> str:
-    return f"₹{float(value):,.2f}"
+    # Use INR text in PDF to avoid currency glyph rendering issues across viewers/fonts.
+    return f"INR {float(value):,.2f}"
+
+
+def _format_display_date(value) -> str:
+    if value is None:
+        return "N/A"
+
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        text = str(value).strip()
+        if not text:
+            return "N/A"
+
+        dt = None
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%d/%m/%y"):
+            try:
+                dt = datetime.strptime(text, fmt)
+                break
+            except ValueError:
+                continue
+
+        if dt is None:
+            parsed = pd.to_datetime(text, errors="coerce", dayfirst=True)
+            if pd.isna(parsed):
+                return text
+            dt = parsed.to_pydatetime()
+
+    return dt.strftime("%d-%b-%Y").upper()
+
+
+def _format_month_label(month_text: str) -> str:
+    text = str(month_text or "").strip()
+    if not text:
+        return "N/A"
+    try:
+        dt = datetime.strptime(text, "%Y-%m")
+        return dt.strftime("%b-%Y").upper()
+    except ValueError:
+        return text
+
+
+def _build_practical_advice_lines(
+    summary: dict,
+    categories: list[dict],
+    top_expenses: list[dict],
+    monthly_target_plan: dict,
+) -> list[str]:
+    lines: list[str] = []
+
+    current_savings = float(summary.get("net_savings", 0))
+    lines.append(
+        f"Current overall savings is {_format_inr(current_savings)}. Keep at least 20% of every new credit aside first."
+    )
+
+    if categories:
+        top_cat = categories[0]
+        top_cat_name = str(top_cat.get("category", "Other"))
+        top_cat_amt = float(top_cat.get("amount", 0))
+        suggested_15 = top_cat_amt * 0.15
+        lines.append(
+            f"Your biggest spending category is {top_cat_name} ({_format_inr(top_cat_amt)}). A 15% cut here saves about {_format_inr(suggested_15)}."
+        )
+
+    if top_expenses:
+        top_tx = top_expenses[0]
+        lines.append(
+            f"Highest single expense is '{top_tx.get('description', 'expense')}' on {_format_display_date(top_tx.get('date'))} for {_format_inr(top_tx.get('amount', 0))}. Review if this can be reduced next month."
+        )
+
+    if monthly_target_plan.get("ok"):
+        month_name = _format_month_label(monthly_target_plan.get("month", ""))
+        target = float(monthly_target_plan.get("target_savings", 0))
+        current = float(monthly_target_plan.get("current_savings", 0))
+        extra_needed = max(0.0, target - current)
+        lines.append(
+            f"For {month_name}, target savings is {_format_inr(target)} and current savings is {_format_inr(current)}. You need {_format_inr(extra_needed)} extra savings to hit the goal."
+        )
+
+        top_cuts = monthly_target_plan.get("suggested_category_plan", [])[:2]
+        for row in top_cuts:
+            lines.append(
+                f"Cut around {_format_inr(row.get('suggested_cut', 0))} from {row.get('category', 'Other')} to stay on track."
+            )
+
+    lines.append(
+        "Use this simple rule: if income rises, save at least half of the increment and spend only the rest."
+    )
+
+    return lines[:6]
+
+
+def _build_pie_entries(categories: list[dict], max_items: int = 6) -> list[tuple[str, float]]:
+    rows: list[tuple[str, float]] = []
+    for item in categories:
+        name = str(item.get("category", "Other")).strip() or "Other"
+        amount = float(item.get("amount", 0.0))
+        if amount > 0:
+            rows.append((name, amount))
+
+    if not rows:
+        return []
+
+    rows.sort(key=lambda x: x[1], reverse=True)
+    top = rows[:max_items]
+    rest_sum = sum(v for _, v in rows[max_items:])
+    if rest_sum > 0:
+        top.append(("Other", rest_sum))
+    return top
 
 
 def _get_pdf_fonts() -> tuple[str, str]:
@@ -418,12 +529,13 @@ def _render_summary_pdf(report: dict) -> bytes:
     ai_advice = str(report.get("ai_advice", "")).strip()
     user_name = str(report.get("user_name", "") or "N/A")
     user_email = str(report.get("user_email", "") or "N/A")
+    monthly_target_plan = report.get("monthly_target_plan", {})
 
     story = []
     story.append(Paragraph("Personal Finance Copilot — Full Finance Report", title_style))
     story.append(
         Paragraph(
-            f"Generated on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+            f"Generated on {_format_display_date(datetime.utcnow())}",
             subtitle_style,
         )
     )
@@ -471,10 +583,10 @@ def _render_summary_pdf(report: dict) -> bytes:
 
     story.append(Paragraph("Monthly Performance", section_style))
     monthly_rows = [["Month", "Income", "Expense", "Net"]]
-    for row in monthly[:12]:
+    for row in monthly:
         monthly_rows.append(
             [
-                str(row.get("month", "")),
+                _format_month_label(str(row.get("month", ""))),
                 _format_inr(row.get("total_in", 0)),
                 _format_inr(row.get("total_out", 0)),
                 _format_inr(row.get("net_savings", 0)),
@@ -505,11 +617,48 @@ def _render_summary_pdf(report: dict) -> bytes:
     for line in category_lines:
         story.append(Paragraph(line, body_style))
 
+    story.append(Paragraph("Expense Distribution (Pie Chart)", section_style))
+    pie_entries = _build_pie_entries(categories, max_items=6)
+    if pie_entries:
+        total_pie = sum(v for _, v in pie_entries)
+        drawing = Drawing(540, 200)
+        pie = Pie()
+        pie.x = 8
+        pie.y = 22
+        pie.width = 145
+        pie.height = 145
+        pie.data = [v for _, v in pie_entries]
+        pie.labels = [
+            f"{name} {(v / total_pie) * 100:.1f}%"
+            for name, v in pie_entries
+        ]
+        pie.sideLabels = True
+        pie.simpleLabels = False
+        pie.slices.strokeColor = colors.white
+        pie.slices.strokeWidth = 0.5
+
+        palette = [
+            colors.HexColor("#2563eb"),
+            colors.HexColor("#16a34a"),
+            colors.HexColor("#f59e0b"),
+            colors.HexColor("#ef4444"),
+            colors.HexColor("#8b5cf6"),
+            colors.HexColor("#06b6d4"),
+            colors.HexColor("#64748b"),
+        ]
+        for i, _ in enumerate(pie_entries):
+            pie.slices[i].fillColor = palette[i % len(palette)]
+
+        drawing.add(pie)
+        story.append(drawing)
+    else:
+        story.append(Paragraph("• Not enough expense data to render pie chart.", body_style))
+
     story.append(Paragraph("Top Expenses", section_style))
     if top_expenses:
         for item in top_expenses[:8]:
             text = (
-                f"• {escape(str(item.get('date', 'N/A')))} | "
+                f"• {escape(_format_display_date(item.get('date', 'N/A')))} | "
                 f"{escape(str(item.get('description', '')))} | {_format_inr(item.get('amount', 0))}"
             )
             story.append(Paragraph(text, body_style))
@@ -543,7 +692,7 @@ def _render_summary_pdf(report: dict) -> bytes:
     else:
         story.append(Paragraph("Forecast unavailable for current data.", body_style))
 
-    story.append(Paragraph("Savings Plan", section_style))
+    story.append(Paragraph("Savings Plan (Overall)", section_style))
     if savings_plan.get("ok"):
         story.append(
             Paragraph(
@@ -569,25 +718,66 @@ def _render_summary_pdf(report: dict) -> bytes:
     else:
         story.append(Paragraph("Savings plan unavailable for current data.", body_style))
 
-    story.append(Paragraph("AI Advice", section_style))
-    cleaned_lines = [ln.strip() for ln in (ai_advice or "").splitlines() if ln.strip()]
-    top_three = []
-    for line in cleaned_lines:
-        line_no_md = re.sub(r"\*\*(.*?)\*\*", r"\1", line)
-        line_no_bullet = re.sub(r"^[\-•\d\.)\s]+", "", line_no_md).strip()
-        if line_no_bullet:
-            top_three.append(line_no_bullet)
-        if len(top_three) == 3:
-            break
+    story.append(Paragraph("Monthly Target Savings Plan", section_style))
+    if monthly_target_plan.get("ok"):
+        month_name = _format_month_label(monthly_target_plan.get("month", ""))
+        target = monthly_target_plan.get("target_savings", 0)
+        month_income = float(monthly_target_plan.get("month_income", 0))
+        month_expense = float(monthly_target_plan.get("month_expense", 0))
+        current = float(monthly_target_plan.get("current_savings", 0))
+        allowed_expense = float(monthly_target_plan.get("allowed_expense_for_target", 0))
+        extra_needed = max(0.0, float(target) - current)
+        story.append(
+            Paragraph(
+                (
+                    f"Month: {month_name} | Income: {_format_inr(month_income)} | Expense: {_format_inr(month_expense)} | "
+                    f"Current saving: {_format_inr(current)}"
+                ),
+                body_style,
+            )
+        )
+        story.append(
+            Paragraph(
+                (
+                    f"Target saving set: {_format_inr(target)} | To hit this target, expense should be at most {_format_inr(allowed_expense)} | "
+                    f"Extra cut needed: {_format_inr(extra_needed)}"
+                ),
+                body_style,
+            )
+        )
+        for row in monthly_target_plan.get("suggested_category_plan", [])[:6]:
+            story.append(
+                Paragraph(
+                    (
+                        f"• Reduce {escape(str(row.get('category', 'Other')))} by {_format_inr(row.get('suggested_cut', 0))} "
+                        f"(new budget {_format_inr(row.get('suggested_new_budget', 0))})"
+                    ),
+                    body_style,
+                )
+            )
+    else:
+        story.append(Paragraph("Monthly target plan unavailable for current data.", body_style))
 
-    if top_three:
-        story.append(Paragraph("Top 3 Advice", section_style))
-        for idx, line in enumerate(top_three, start=1):
-            story.append(Paragraph(f"Advice {idx}: {escape(line)}", advice_item_style))
+    story.append(Paragraph("Advice", section_style))
+    practical_lines = _build_practical_advice_lines(
+        summary=summary,
+        categories=categories,
+        top_expenses=top_expenses,
+        monthly_target_plan=monthly_target_plan,
+    )
+    for line in practical_lines[:3]:
+        story.append(Paragraph(f"• {escape(line)}", advice_item_style))
 
-    advice = escape(ai_advice or "AI advice is unavailable right now.")
-    advice = advice.replace("**", "").replace("\n", "<br/>")
-    story.append(Paragraph(advice, body_style))
+    for line in practical_lines[3:]:
+        story.append(Paragraph(f"• {escape(line)}", body_style))
+
+    if ai_advice:
+        cleaned_ai = ai_advice.lower()
+        blocked_terms = ["box plot", "outlier", "regression equation", "standard deviation"]
+        if not any(term in cleaned_ai for term in blocked_terms):
+            plain = escape(ai_advice).replace("**", "").replace("\n", "<br/>")
+            story.append(Paragraph(plain, body_style))
+
     story.append(Spacer(1, 10))
     story.append(
         Paragraph(
@@ -913,7 +1103,11 @@ def user_transactions_csv(current_user: User = Depends(get_current_user), db: Se
 
 
 @user_router.get("/reports/summary.pdf")
-def user_summary_pdf(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def user_summary_pdf(
+    period: str | None = Query(default="all"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     df = _get_user_df_or_400(db, current_user)
     settings = _ensure_user_settings(db, current_user)
 
@@ -937,20 +1131,67 @@ def user_summary_pdf(current_user: User = Depends(get_current_user), db: Session
     )
     savings_plan = suggest_savings_target_plan(df, target_savings=float(target_savings))
 
-    selected_model = settings.ollama_model or DEFAULT_OLLAMA_MODEL
-    ai_payload = generate_finance_advice(
-        summary=summary,
-        categories=categories,
-        monthly=monthly,
-        monthly_categories=monthly_categories,
-        anomalies=anomalies_payload,
-        model=selected_model,
-    )
-    ai_advice = (
-        ai_payload.get("advice")
-        if ai_payload.get("ok")
-        else f"AI advice unavailable: {ai_payload.get('error', 'Unknown issue')}"
-    )
+    monthly_target_plan = {"ok": False}
+    if not df.empty and "date" in df.columns:
+        monthly_df = df[df["date"].notna()].copy()
+        if not monthly_df.empty:
+            available_months = sorted(monthly_df["date"].dt.to_period("M").unique())
+            selected_period = None
+            period_text = str(period or "all").strip().lower()
+            if period_text and period_text != "all":
+                try:
+                    candidate = pd.Period(period_text, freq="M")
+                    if candidate in available_months:
+                        selected_period = candidate
+                except Exception:
+                    selected_period = None
+
+            target_period = selected_period or available_months[-1]
+            month_slice = monthly_df[monthly_df["date"].dt.to_period("M") == target_period].copy()
+            if not month_slice.empty:
+                month_summary = compute_core_summary(month_slice)
+                month_income = float(month_summary.get("total_in", 0.0))
+                month_expense = float(month_summary.get("total_out", 0.0))
+                month_savings = float(month_summary.get("net_savings", 0.0))
+                allowed_expense = max(0.0, month_income - float(target_savings))
+
+                # How much expense should have been reduced in this month to achieve target savings.
+                cut_needed = max(0.0, month_expense - allowed_expense)
+                month_categories = compute_category_breakdown(month_slice)
+
+                suggested_category_plan = []
+                if month_expense > 0 and month_categories:
+                    for item in month_categories:
+                        amount = float(item.get("amount", 0.0))
+                        share = amount / month_expense
+                        suggested_cut = round(cut_needed * share, 2)
+                        suggested_category_plan.append(
+                            {
+                                "category": str(item.get("category", "Other")),
+                                "current_amount": round(amount, 2),
+                                "suggested_cut": suggested_cut,
+                                "suggested_new_budget": round(max(0.0, amount - suggested_cut), 2),
+                            }
+                        )
+
+                monthly_target_plan = {
+                    "ok": True,
+                    "month": str(target_period),
+                    "target_savings": round(float(target_savings), 2),
+                    "month_income": round(month_income, 2),
+                    "month_expense": round(month_expense, 2),
+                    "allowed_expense_for_target": round(allowed_expense, 2),
+                    "current_savings": round(month_savings, 2),
+                    "cut_needed": round(cut_needed, 2),
+                    "suggested_category_plan": sorted(
+                        suggested_category_plan,
+                        key=lambda x: x.get("suggested_cut", 0),
+                        reverse=True,
+                    ),
+                }
+
+    # Keep PDF generation fast: skip live AI call during report download.
+    ai_advice = ""
 
     report_payload = {
         "user_name": current_user.full_name or "N/A",
@@ -962,6 +1203,7 @@ def user_summary_pdf(current_user: User = Depends(get_current_user), db: Session
         "anomalies": anomalies_payload.get("anomalies", []),
         "forecast": forecast,
         "savings_plan": savings_plan,
+        "monthly_target_plan": monthly_target_plan,
         "ai_advice": ai_advice,
     }
     pdf_bytes = _render_summary_pdf(report_payload)

@@ -16,6 +16,7 @@ const CATEGORY_RULES = {
 }
 
 const formatINR = (value) => `₹${Number(value || 0).toLocaleString()}`
+const PIE_COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#64748b']
 
 async function fetchJson(url, options = {}) {
   const res = await fetch(url, options)
@@ -411,6 +412,100 @@ function HorizontalBars({ title, items = [], labelKey, valueKey }) {
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+function ExpensePieChart({ title, items = [] }) {
+  const validItems = items.filter((item) => Number(item.amount || 0) > 0)
+  if (!validItems.length) {
+    return (
+      <div className="card chart-card">
+        <h3>{title}</h3>
+        <p className="muted">No expense data available for pie view.</p>
+      </div>
+    )
+  }
+
+  const topItems = validItems.slice(0, 6)
+  const otherAmount = validItems.slice(6).reduce((sum, i) => sum + Number(i.amount || 0), 0)
+  const pieItems = otherAmount > 0 ? [...topItems, { category: 'Other', amount: otherAmount }] : topItems
+  const total = pieItems.reduce((sum, item) => sum + Number(item.amount || 0), 0)
+
+  const cx = 90
+  const cy = 90
+  const r = 70
+  const polar = (angle) => {
+    const rad = (angle * Math.PI) / 180
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+  }
+
+  let running = 0
+  const slices = pieItems.map((item, idx) => {
+    const value = Number(item.amount || 0)
+    const ratio = value / total
+    const start = running * 360 - 90
+    running += ratio
+    const end = running * 360 - 90
+    const sweep = end - start
+
+    if (sweep >= 359.999) {
+      return (
+        <circle
+          key={`slice-${item.category}-${idx}`}
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill={PIE_COLORS[idx % PIE_COLORS.length]}
+          stroke="#fff"
+          strokeWidth="1"
+        />
+      )
+    }
+
+    const p1 = polar(start)
+    const p2 = polar(end)
+    const largeArc = sweep > 180 ? 1 : 0
+    const d = `M ${cx} ${cy} L ${p1.x} ${p1.y} A ${r} ${r} 0 ${largeArc} 1 ${p2.x} ${p2.y} Z`
+
+    return (
+      <path
+        key={`slice-${item.category}-${idx}`}
+        d={d}
+        fill={PIE_COLORS[idx % PIE_COLORS.length]}
+        stroke="#fff"
+        strokeWidth="1"
+      />
+    )
+  })
+
+  return (
+    <div className="card chart-card pie-card">
+      <h3>{title}</h3>
+      <div className="pie-wrap">
+        <svg viewBox="0 0 180 180" role="img" aria-label="Expense pie chart">
+          {slices}
+          <circle cx={cx} cy={cy} r="26" fill="#fff" />
+          <text x={cx} y={cy - 4} textAnchor="middle" fontSize="9" fill="#334155">Total</text>
+          <text x={cx} y={cy + 10} textAnchor="middle" fontSize="10" fill="#0f172a" fontWeight="700">{formatINR(total)}</text>
+        </svg>
+
+        <ul className="pie-legend">
+          {pieItems.map((item, idx) => {
+            const value = Number(item.amount || 0)
+            const pct = ((value / total) * 100).toFixed(1)
+            return (
+              <li key={`${item.category}-${idx}`}>
+                <span className="dot" style={{ background: PIE_COLORS[idx % PIE_COLORS.length] }} />
+                <div>
+                  <strong>{item.category}</strong>
+                  <small>{formatINR(value)} ({pct}%)</small>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
       </div>
     </div>
   )
@@ -835,6 +930,10 @@ export default function App() {
             </div>
 
             <div className="grid">
+              <ExpensePieChart
+                title="Expense Distribution (Pie)"
+                items={categories}
+              />
               <HorizontalBars
                 title="Spending by Category"
                 items={categories.slice(0, 8)}
@@ -891,7 +990,12 @@ export default function App() {
               <div className="button-row">
                 <button onClick={saveSettings}>Save Settings</button>
                 <button className="secondary-btn" onClick={() => downloadWithAuth('/user/reports/transactions.csv', 'transactions_report.csv')}>Download CSV</button>
-                <button className="secondary-btn" onClick={() => downloadWithAuth('/user/reports/summary.pdf', 'finance_summary_report.pdf')}>Download Full PDF Report</button>
+                <button
+                  className="secondary-btn"
+                  onClick={() => downloadWithAuth(`/user/reports/summary.pdf?period=${encodeURIComponent(selectedPeriod)}`, 'finance_summary_report.pdf')}
+                >
+                  Download Full PDF Report
+                </button>
                 <button className="danger-btn" onClick={clearHistory}>Clear History</button>
               </div>
               {error && <p className="error-text">{error}</p>}

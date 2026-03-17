@@ -1,142 +1,164 @@
-# Personal Finance Copilot (AI-Powered)
+# Personal Finance Copilot (AI-Powered Full-Stack Project)
 
-An end-to-end **full-stack personal finance assistant** that helps users upload bank data, analyze spending, detect anomalies, forecast savings, chat with AI, and download professional reports.
+An end-to-end personal finance platform built with **React + FastAPI + SQLAlchemy + Ollama**.
+
+It allows users to:
+- securely register/login,
+- upload bank transactions (CSV or raw text),
+- analyze spending patterns,
+- generate savings plans,
+- chat with an AI finance assistant,
+- download professional reports (CSV + PDF with charts).
 
 ---
 
-## Resume / Job Portfolio Summary
+## 1) Portfolio / Resume Summary
 
-### Project Overview
-Built a production-style, multi-user finance analytics platform with:
-- **Secure authentication** (JWT, user-specific data isolation)
-- **CSV + raw statement text ingestion**
-- **Rule-based financial analytics engine**
-- **AI finance assistant** (local LLM via Ollama)
-- **Forecasting + target-based savings planner**
-- **Downloadable reports** (CSV + styled PDF)
-- **Modern React dashboard** with Home + AI chat experience
-
-### Key Engineering Highlights
-- Designed modular backend architecture (`finance_engine`, `auth`, `user_api`, `llm_ollama`, `mcp_server`)
-- Implemented resilient parsing pipeline for messy statement text input
-- Built analytics stack: category breakdown, monthly trends, top expenses, anomaly alerts
-- Added clean UX patterns: auth validation, period filtering (month/year or all-time), file upload workflows
-- Generated polished PDF reports including user identity and Unicode-safe `₹` rendering
+### Project Highlights
+- Built a multi-user finance analytics product with **JWT authentication** and user-level data isolation.
+- Implemented robust **transaction ingestion pipeline** for CSV and unstructured statement text.
+- Developed a reusable **analytics engine** for summary, categories, monthly trends, anomalies, forecast, and target-based savings planning.
+- Integrated **local LLM inference using Ollama** for AI finance Q&A.
+- Added downloadable **PDF reports** with styled sections, monthly performance table, and expense pie chart.
+- Added full-stack validation scripts for backend API testing + frontend production build checks.
 
 ### Tech Stack
-- **Frontend:** React (Vite), CSS
-- **Backend:** FastAPI, SQLAlchemy, Pydantic
-- **Database:** SQLite (default, via SQLAlchemy models)
+- **Frontend:** React (Vite), plain CSS
+- **Backend:** FastAPI, Pydantic, SQLAlchemy
+- **Database:** SQLite
 - **AI:** Ollama (`llama3.2:3b` default)
 - **Reporting:** ReportLab (PDF), CSV export
-- **Tooling/Integration:** MCP server support
+- **Testing:** Python `unittest` + FastAPI `TestClient`
 
 ---
 
-## Architecture (High Level)
+## 2) Product Features
 
-```
+### Authentication & User Management
+- User registration and login
+- JWT-based secured APIs
+- User-scoped transactions and settings
+
+### Data Ingestion
+- Upload bank CSV files
+- Upload raw statement text (parser with fallback handling)
+
+### Finance Analytics
+- Total In / Total Out / Net Savings
+- Category-wise spending
+- Top expenses
+- Monthly performance summary
+- Anomaly detection
+- Next-month forecast
+- Savings target planner (with category cut suggestions)
+
+### AI Assistant
+- Ask finance questions on personal transaction context
+- Local model usage via Ollama (no paid API required)
+
+### Reports
+- Transactions CSV export
+- Full finance PDF report including:
+  - summary table,
+  - monthly performance,
+  - category breakdown,
+  - expense pie chart,
+  - top expenses,
+  - anomaly alerts,
+  - forecast,
+  - savings plans,
+  - practical advice.
+
+---
+
+## 3) Architecture Overview
+
+```text
 React UI (frontend/src)
-    ↓ REST API
-FastAPI (src/api.py + src/user_api.py)
-    ├─ Auth + User settings + History
-    ├─ Ingestion (CSV/Text)
-    ├─ Analytics (src/finance_engine.py)
-    ├─ AI insights/Q&A (src/llm_ollama.py)
-    └─ Reports (CSV + PDF)
-         ↓
-SQLAlchemy Models (src/models.py) + DB (src/db.py)
+   └── calls REST APIs
+
+FastAPI Service (src/api.py, src/user_api.py)
+   ├── Auth + user settings
+   ├── Upload (CSV/Text)
+   ├── Analytics engine (src/finance_engine.py)
+   ├── AI integration (src/llm_ollama.py)
+   └── Report generation (CSV/PDF)
+
+Persistence Layer
+   └── SQLAlchemy models (src/models.py) + SQLite (src/db.py)
 ```
 
 ---
 
-## Step-by-Step: How This Project Was Built
+## 4) Repository Structure
 
-### Step 1 — Setup & Base Analysis
-- Created Python virtual environment and dependency setup.
-- Added sample transaction CSV and first analyzer script.
-- Computed:
-  - total credit
-  - total debit
-  - net savings
-  - top expenses
-
-### Step 2 — Transaction Categorization Engine
-- Added keyword-based category mapping (Food, Transport, Utilities, etc.).
-- Integrated category-wise spending breakdown.
-
-### Step 3 — Trend & Risk Signals
-- Added monthly summary generation.
-- Added anomaly detection (median-based high expense detection).
-
-### Step 4 — FastAPI Service Layer
-- Converted analytics logic into reusable backend endpoints:
-  - `/summary`, `/categories`, `/monthly`, `/top-expenses`, `/anomalies`, etc.
-
-### Step 5 — MCP Tooling Integration
-- Created `src/mcp_server.py` exposing analytics tools for AI tool-calling workflows.
-
-### Step 6 — LLM Integration (Ollama)
-- Integrated local AI advice generation and Q&A endpoints:
-  - `/ai-insight`
-  - `/ai-ask?question=...`
-
-### Step 7 — Forecast & Savings Planner
-- Added predictive endpoint for next-month finances.
-- Added target savings plan with category-wise reduction suggestions.
-
-### Step 8 — User Auth + Data Isolation
-- Implemented register/login with JWT.
-- Added user-scoped transactions/settings endpoints.
-- Ensured each user sees only their own data.
-
-### Step 9 — Data Ingestion Workflows
-- Added CSV upload endpoint.
-- Added text statement ingestion with parser and fallback tips.
-
-### Step 10 — Report Generation
-- Added downloadable:
-  - transactions CSV
-  - full PDF summary report
-- Included user name/email and improved report formatting.
-
-### Step 11 — React Dashboard
-- Built login/register UI.
-- Added Home dashboard with:
-  - month/year or all-time filters
-  - upload sections
-  - analytics cards/charts
-  - report download actions
-- Added AI chat page.
-
-### Step 12 — UX Refinements
-- Strong auth input validation + friendly error messages.
-- Professional upload UI and visual polish.
-- Improved PDF typography + robust rupee symbol rendering.
+```text
+.
+├── data/
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── styles.css
+│   └── package.json
+├── scripts/
+│   └── test_project.sh
+├── src/
+│   ├── analyze_csv.py
+│   ├── api.py
+│   ├── auth.py
+│   ├── db.py
+│   ├── finance_engine.py
+│   ├── llm_ollama.py
+│   ├── mcp_server.py
+│   ├── models.py
+│   └── user_api.py
+├── tests/
+│   └── test_full_project.py
+├── requirements.txt
+└── README.md
+```
 
 ---
 
-## How to Run the Project (Local)
+## 5) Local Setup (Step-by-Step)
 
-### 1) Backend
+## Prerequisites
+- Python 3.11+
+- Node.js 18+
+- npm
+- (Optional for AI) Ollama installed and running
+
+### Step 1: Clone and enter project
 ```bash
 cd /Users/arijidas/Documents/Project/some
+```
+
+### Step 2: Backend setup
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+### Step 3: Run backend API
+```bash
 python -m uvicorn src.api:app --reload
 ```
 
-### 2) Frontend
+Backend URL: `http://127.0.0.1:8000`
+
+### Step 4: Frontend setup
+Open a second terminal:
 ```bash
 cd /Users/arijidas/Documents/Project/some/frontend
 npm install
 npm run dev
 ```
 
-Open Vite URL shown in terminal (usually `http://localhost:5173`).
+Frontend URL will be printed by Vite (usually `http://localhost:5173` or next available port).
 
-### 3) Optional AI (Ollama)
+### Step 5 (Optional): Enable local AI with Ollama
 ```bash
 ollama serve
 ollama pull llama3.2:3b
@@ -144,28 +166,37 @@ ollama pull llama3.2:3b
 
 ---
 
-## Quick Demo Flow
+## 6) How to Use the App
 
-1. Register a user and login.
-2. Upload CSV: `data/demo_upload_transactions.csv`
-3. Paste text from: `data/demo_upload_statement_text.txt`
-4. Select month/year filter in Home dashboard.
-5. Review metrics, trends, anomalies, forecasts, and savings plan.
-6. Ask finance questions in AI Feature tab.
-7. Download CSV and PDF reports.
+1. Register a new account and login.
+2. Upload transaction data:
+   - CSV upload, or
+   - paste statement text.
+3. Select period filter (All Time or specific month).
+4. Review dashboard:
+   - metrics, bars, pie chart, trends, top expenses.
+5. Set target savings and check savings plan recommendations.
+6. Use AI chat for personalized finance questions.
+7. Download reports:
+   - CSV report
+   - Full PDF report.
 
 ---
 
-## Important API Groups
+## 7) API Overview
 
 ### Auth
 - `POST /auth/register`
 - `POST /auth/login`
 
-### User Data + Analytics
-- `GET /user/transactions`
+### User & Analytics
+- `GET /user/me`
+- `GET /user/settings`
+- `PUT /user/settings`
 - `POST /user/upload-csv`
 - `POST /user/upload-text`
+- `GET /user/transactions`
+- `DELETE /user/transactions`
 - `GET /user/summary`
 - `GET /user/categories`
 - `GET /user/monthly`
@@ -174,40 +205,43 @@ ollama pull llama3.2:3b
 - `GET /user/forecast`
 - `GET /user/savings-plan`
 
-### AI + Reports
+### AI
 - `GET /user/ai-insight`
 - `GET /user/ai-ask`
+
+### Reports
 - `GET /user/reports/transactions.csv`
-- `GET /user/reports/summary.pdf`
+- `GET /user/reports/summary.pdf?period=all|YYYY-MM`
 
 ---
 
-## Resume Bullet Points (Copy-Ready)
+## 8) Testing & Validation
 
-- Built a full-stack AI-powered personal finance platform using **React + FastAPI + SQLAlchemy** with secure JWT authentication and user-scoped data isolation.
-- Engineered CSV/text ingestion pipelines and a rule-based analytics engine delivering category insights, monthly trends, anomaly detection, and savings forecasts.
-- Integrated local LLM workflows using **Ollama** for personalized finance Q&A and automated advisory generation.
-- Developed professional reporting features with downloadable CSV/PDF outputs, including styled layouts and Unicode-safe currency rendering.
+### Run complete automated checks
+```bash
+cd /Users/arijidas/Documents/Project/some
+bash scripts/test_project.sh
+```
+
+This script runs:
+1. Backend end-to-end tests (`tests/test_full_project.py`)
+2. Frontend production build (`npm run build`)
 
 ---
 
-## Repository Structure
+## 9) Resume-Ready Engineering Notes
 
-```
-src/
-  analyze_csv.py
-  api.py
-  auth.py
-  db.py
-  finance_engine.py
-  llm_ollama.py
-  mcp_server.py
-  models.py
-  user_api.py
+- Designed a modular analytics backend with clean separation between API, business logic, and persistence.
+- Implemented robust parsing for semi-structured financial statement text.
+- Delivered local-first AI integration with graceful fallback behavior.
+- Added professional reporting with charted PDF output and period-specific savings recommendations.
+- Built and maintained end-to-end automation for reliability.
 
-frontend/
-  src/
-    App.jsx
-    main.jsx
-    styles.css
-```
+---
+
+## 10) Sample Resume Bullet Points
+
+- Built a full-stack personal finance copilot using **React, FastAPI, SQLAlchemy, and SQLite**, enabling secure multi-user transaction analytics and reporting.
+- Engineered a finance analytics pipeline for category breakdown, monthly trends, anomaly detection, forecasting, and target-based savings plans.
+- Integrated local AI assistant workflows with **Ollama** for contextual personal finance Q&A.
+- Developed polished exports (CSV + PDF with charts) and automated test/build pipeline for production-style quality assurance.

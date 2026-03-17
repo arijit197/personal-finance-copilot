@@ -295,6 +295,50 @@ header p {
   gap: 10px;
 }
 
+.pie-card .pie-wrap {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.pie-card svg {
+  width: 180px;
+  height: 180px;
+}
+
+.pie-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.pie-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pie-legend .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.pie-legend li div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pie-legend li small {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
 .bar-chart-row {
   display: grid;
   gap: 6px;
@@ -627,6 +671,11 @@ button:disabled {
 
   .chat-form {
     grid-template-columns: 1fr;
+  }
+
+  .pie-card .pie-wrap {
+    grid-template-columns: 1fr;
+    justify-items: center;
   }
 }
 
