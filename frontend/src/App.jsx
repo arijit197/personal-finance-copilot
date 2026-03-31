@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Button } from './components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
+import { Input, Select, Textarea } from './components/ui/input'
+import { Container, Section } from './components/ui/layout'
 
 const API_BASE_URL = 'http://127.0.0.1:8000'
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
@@ -16,7 +20,7 @@ const CATEGORY_RULES = {
 }
 
 const formatINR = (value) => `₹${Number(value || 0).toLocaleString()}`
-const PIE_COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#64748b']
+const PIE_COLORS = ['#fafafa', '#d4d4d8', '#a1a1aa', '#71717a', '#52525b', '#3f3f46', '#27272a']
 
 async function fetchJson(url, options = {}) {
   const res = await fetch(url, options)
@@ -211,6 +215,41 @@ function computeSavingsPlan(summary, categories, targetSavings) {
   }
 }
 
+function Field({ label, hint, error, children }) {
+  return (
+    <label className="flex flex-col gap-3 text-sm font-medium text-text-secondary">
+      <span className="label-text">{label}</span>
+      {children}
+      {hint ? <span className="text-xs text-text-muted">{hint}</span> : null}
+      {error ? <span className="text-xs text-red-300">{error}</span> : null}
+    </label>
+  )
+}
+
+function StatCard({ label, value }) {
+  return (
+    <Card className="bg-accent-gradient">
+      <CardContent className="space-y-3">
+        <p className="label-text">{label}</p>
+        <p className="metric-value">{value}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SectionIntro({ eyebrow, title, description, action }) {
+  return (
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="max-w-2xl space-y-3">
+        {eyebrow ? <p className="label-text">{eyebrow}</p> : null}
+        <h1 className="text-3xl font-semibold tracking-[0.04em] text-text-primary lg:text-4xl">{title}</h1>
+        {description ? <p className="text-sm leading-7 text-text-secondary lg:text-base">{description}</p> : null}
+      </div>
+      {action ? <div>{action}</div> : null}
+    </div>
+  )
+}
+
 function AuthCard({ mode, onModeChange, onLoginSuccess }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -275,145 +314,214 @@ function AuthCard({ mode, onModeChange, onLoginSuccess }) {
   }
 
   return (
-    <div className="card auth-card">
-      <h2>{isRegister ? 'Create Account' : 'Welcome Back'}</h2>
-      <p className="muted auth-subtitle">
-        {isRegister
-          ? 'Use a valid email and strong password to register securely.'
-          : 'Login to access Home reports, AI chat, and your finance dashboard.'}
-      </p>
-      <form onSubmit={submit}>
-        {isRegister && (
-          <label>
-            Full Name
-            <input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-          </label>
-        )}
-        <label>
-          Email
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          {email && !emailValid && <span className="input-hint error-text">Enter a valid email format.</span>}
-        </label>
-        <label>
-          Password
-          <input
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            required
-          />
-          <div className="show-password-line">
-            <input
-              type="checkbox"
-              checked={showPassword}
-              onChange={(e) => setShowPassword(e.target.checked)}
-            />
-            <span>Show password</span>
-          </div>
-          {password && !passwordValid && (
-            <span className="input-hint error-text">Password must be at least 8 characters.</span>
+    <Card className="w-full max-w-xl bg-bg-elevated/95">
+      <CardHeader>
+        <p className="label-text">{isRegister ? 'Create profile' : 'Welcome back'}</p>
+        <CardTitle className="text-2xl lg:text-3xl">
+          {isRegister ? 'Create your account' : 'Sign in to Finance Copilot'}
+        </CardTitle>
+        <CardDescription>
+          {isRegister
+            ? 'Use a valid email and strong password to register securely.'
+            : 'Login to access Home reports, AI chat, and your finance dashboard.'}
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent>
+        <form className="space-y-5" onSubmit={submit}>
+          {isRegister && (
+            <Field label="Full Name">
+              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+            </Field>
           )}
-        </label>
-        <button type="submit" disabled={loading}>
-          {loading ? 'Please wait...' : isRegister ? 'Register' : 'Login'}
-        </button>
-      </form>
-      {info && <p className="success-text">{info}</p>}
-      {error && <p className="error-text">{error}</p>}
-      <p className="muted">
-        {isRegister ? 'Already have account?' : 'New here?'}{' '}
-        <button className="link-btn" onClick={() => onModeChange(isRegister ? 'login' : 'register')}>
-          {isRegister ? 'Login' : 'Register'}
-        </button>
-      </p>
-    </div>
+
+          <Field
+            label="Email"
+            error={email && !emailValid ? 'Enter a valid email format.' : ''}
+          >
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </Field>
+
+          <Field
+            label="Password"
+            error={password && !passwordValid ? 'Password must be at least 8 characters.' : ''}
+          >
+            <Input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={8}
+              required
+            />
+            <label className="flex items-center gap-3 text-sm text-text-muted">
+              <input
+                type="checkbox"
+                checked={showPassword}
+                onChange={(e) => setShowPassword(e.target.checked)}
+                className="h-4 w-4 rounded border-border-subtle bg-bg-secondary accent-white"
+              />
+              <span>Show password</span>
+            </label>
+          </Field>
+
+          <Button type="submit" fullWidth disabled={loading}>
+            {loading ? 'Please wait...' : isRegister ? 'Register' : 'Login'}
+          </Button>
+        </form>
+
+        {info ? <p className="text-sm text-emerald-300">{info}</p> : null}
+        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+
+        <p className="text-sm text-text-secondary">
+          {isRegister ? 'Already have account?' : 'New here?'}{' ' }
+          <button
+            className="font-semibold text-text-primary transition duration-200 hover:opacity-80"
+            onClick={() => onModeChange(isRegister ? 'login' : 'register')}
+          >
+            {isRegister ? 'Login' : 'Register'}
+          </button>
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 
 function ForecastCard({ forecast }) {
-  if (!forecast?.ok) return <div className="card error">Forecast unavailable.</div>
+  if (!forecast?.ok) {
+    return (
+      <Card className="border-red-950 bg-red-950/20">
+        <CardTitle>Forecast unavailable.</CardTitle>
+      </Card>
+    )
+  }
 
   return (
-    <div className="card">
-      <h3>Next Month Forecast</h3>
-      <p><strong>Based on:</strong> {forecast.last_month}</p>
-      <p>Predicted Income: {formatINR(forecast.predicted_next_month_income)}</p>
-      <p>Predicted Expense: {formatINR(forecast.predicted_next_month_expense)}</p>
-      <p>Predicted Savings: {formatINR(forecast.predicted_next_month_savings)}</p>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Next Month Forecast</CardTitle>
+        <CardDescription>Projection based on your latest monthly performance.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4 sm:grid-cols-2">
+        <div className="surface-muted rounded-2xl p-4">
+          <p className="label-text">Based on</p>
+          <p className="mt-3 text-base font-semibold text-text-primary">{forecast.last_month}</p>
+        </div>
+        <div className="surface-muted rounded-2xl p-4">
+          <p className="label-text">Predicted Savings</p>
+          <p className="mt-3 text-base font-semibold text-text-primary">{formatINR(forecast.predicted_next_month_savings)}</p>
+        </div>
+        <div className="surface-muted rounded-2xl p-4">
+          <p className="label-text">Predicted Income</p>
+          <p className="mt-3 text-base font-semibold text-text-primary">{formatINR(forecast.predicted_next_month_income)}</p>
+        </div>
+        <div className="surface-muted rounded-2xl p-4">
+          <p className="label-text">Predicted Expense</p>
+          <p className="mt-3 text-base font-semibold text-text-primary">{formatINR(forecast.predicted_next_month_expense)}</p>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
 function SavingsPlanCard({ plan }) {
-  if (!plan?.ok) return <div className="card error">Savings plan unavailable.</div>
+  if (!plan?.ok) {
+    return (
+      <Card className="border-red-950 bg-red-950/20">
+        <CardTitle>Savings plan unavailable.</CardTitle>
+      </Card>
+    )
+  }
 
   return (
-    <div className="card">
-      <h3>Savings Target Plan</h3>
-      <p>Target Savings: {formatINR(plan.target_savings)}</p>
-      <p>Current Savings: {formatINR(plan.current_savings)}</p>
-      <p><strong>Cut Needed:</strong> {formatINR(plan.cut_needed)}</p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Savings Target Plan</CardTitle>
+        <CardDescription>Suggested category adjustments to match your target savings.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="surface-muted rounded-2xl p-4">
+            <p className="label-text">Target Savings</p>
+            <p className="mt-3 text-base font-semibold text-text-primary">{formatINR(plan.target_savings)}</p>
+          </div>
+          <div className="surface-muted rounded-2xl p-4">
+            <p className="label-text">Current Savings</p>
+            <p className="mt-3 text-base font-semibold text-text-primary">{formatINR(plan.current_savings)}</p>
+          </div>
+          <div className="surface-muted rounded-2xl p-4">
+            <p className="label-text">Cut Needed</p>
+            <p className="mt-3 text-base font-semibold text-text-primary">{formatINR(plan.cut_needed)}</p>
+          </div>
+        </div>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Current</th>
-              <th>Suggested Cut</th>
-              <th>New Budget</th>
-            </tr>
-          </thead>
-          <tbody>
-            {plan.suggested_category_plan?.slice(0, 8).map((row) => (
-              <tr key={row.category}>
-                <td>{row.category}</td>
-                <td>{formatINR(row.current_amount)}</td>
-                <td>{formatINR(row.suggested_cut)}</td>
-                <td>{formatINR(row.suggested_new_budget)}</td>
+        <div className="table-shell overflow-x-auto">
+          <table className="min-w-full text-left text-sm text-text-secondary">
+            <thead className="border-b border-border-subtle text-xs uppercase tracking-[0.18em] text-text-muted">
+              <tr>
+                <th className="px-4 py-4">Category</th>
+                <th className="px-4 py-4">Current</th>
+                <th className="px-4 py-4">Suggested Cut</th>
+                <th className="px-4 py-4">New Budget</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+            </thead>
+            <tbody>
+              {plan.suggested_category_plan?.slice(0, 8).map((row) => (
+                <tr key={row.category} className="border-b border-border-subtle/80 last:border-b-0">
+                  <td className="px-4 py-4 text-text-primary">{row.category}</td>
+                  <td className="px-4 py-4">{formatINR(row.current_amount)}</td>
+                  <td className="px-4 py-4">{formatINR(row.suggested_cut)}</td>
+                  <td className="px-4 py-4">{formatINR(row.suggested_new_budget)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
 function HorizontalBars({ title, items = [], labelKey, valueKey }) {
   if (!items.length) {
     return (
-      <div className="card chart-card">
-        <h3>{title}</h3>
-        <p className="muted">No data available for selected period.</p>
-      </div>
+      <Card>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>No data available for selected period.</CardDescription>
+      </Card>
     )
   }
 
   const maxValue = Math.max(...items.map((item) => Number(item[valueKey] || 0)), 1)
 
   return (
-    <div className="card chart-card">
-      <h3>{title}</h3>
-      <div className="bar-chart-list">
-        {items.map((item, idx) => {
-          const value = Number(item[valueKey] || 0)
-          const widthPct = Math.max(4, (value / maxValue) * 100)
-          return (
-            <div className="bar-chart-row" key={`${item[labelKey]}-${idx}`}>
-              <div className="bar-chart-header">
-                <span>{item[labelKey]}</span>
-                <strong>{formatINR(value)}</strong>
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>Category-level expense intensity across the selected scope.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {items.map((item, idx) => {
+            const value = Number(item[valueKey] || 0)
+            const widthPct = Math.max(4, (value / maxValue) * 100)
+            return (
+              <div className="space-y-2" key={`${item[labelKey]}-${idx}`}>
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-text-secondary">{item[labelKey]}</span>
+                  <strong className="font-semibold text-text-primary">{formatINR(value)}</strong>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-bg-secondary">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-zinc-500 to-zinc-100"
+                    style={{ width: `${widthPct}%` }}
+                  />
+                </div>
               </div>
-              <div className="bar-track">
-                <div className="bar-fill" style={{ width: `${widthPct}%` }} />
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -421,10 +529,10 @@ function ExpensePieChart({ title, items = [] }) {
   const validItems = items.filter((item) => Number(item.amount || 0) > 0)
   if (!validItems.length) {
     return (
-      <div className="card chart-card">
-        <h3>{title}</h3>
-        <p className="muted">No expense data available for pie view.</p>
-      </div>
+      <Card>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>No expense data available for pie view.</CardDescription>
+      </Card>
     )
   }
 
@@ -458,7 +566,7 @@ function ExpensePieChart({ title, items = [] }) {
           cy={cy}
           r={r}
           fill={PIE_COLORS[idx % PIE_COLORS.length]}
-          stroke="#fff"
+          stroke="#0b0b0b"
           strokeWidth="1"
         />
       )
@@ -474,50 +582,58 @@ function ExpensePieChart({ title, items = [] }) {
         key={`slice-${item.category}-${idx}`}
         d={d}
         fill={PIE_COLORS[idx % PIE_COLORS.length]}
-        stroke="#fff"
+        stroke="#0b0b0b"
         strokeWidth="1"
       />
     )
   })
 
   return (
-    <div className="card chart-card pie-card">
-      <h3>{title}</h3>
-      <div className="pie-wrap">
-        <svg viewBox="0 0 180 180" role="img" aria-label="Expense pie chart">
-          {slices}
-          <circle cx={cx} cy={cy} r="26" fill="#fff" />
-          <text x={cx} y={cy - 4} textAnchor="middle" fontSize="9" fill="#334155">Total</text>
-          <text x={cx} y={cy + 10} textAnchor="middle" fontSize="10" fill="#0f172a" fontWeight="700">{formatINR(total)}</text>
-        </svg>
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>Relative spend distribution across your highest categories.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-6 xl:grid-cols-[220px_1fr] xl:items-center">
+        <div className="mx-auto w-[180px]">
+          <svg viewBox="0 0 180 180" role="img" aria-label="Expense pie chart" className="h-[180px] w-[180px]">
+            {slices}
+            <circle cx={cx} cy={cy} r="26" fill="#0b0b0b" />
+            <text x={cx} y={cy - 4} textAnchor="middle" fontSize="9" fill="#a1a1aa">Total</text>
+            <text x={cx} y={cy + 10} textAnchor="middle" fontSize="10" fill="#ffffff" fontWeight="700">{formatINR(total)}</text>
+          </svg>
+        </div>
 
-        <ul className="pie-legend">
+        <ul className="grid gap-3">
           {pieItems.map((item, idx) => {
             const value = Number(item.amount || 0)
             const pct = ((value / total) * 100).toFixed(1)
             return (
-              <li key={`${item.category}-${idx}`}>
-                <span className="dot" style={{ background: PIE_COLORS[idx % PIE_COLORS.length] }} />
-                <div>
-                  <strong>{item.category}</strong>
-                  <small>{formatINR(value)} ({pct}%)</small>
+              <li key={`${item.category}-${idx}`} className="surface-muted flex items-center gap-3 rounded-2xl p-3">
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ background: PIE_COLORS[idx % PIE_COLORS.length] }}
+                />
+                <div className="flex flex-col gap-1">
+                  <strong className="text-sm font-semibold text-text-primary">{item.category}</strong>
+                  <small className="text-xs text-text-muted">{formatINR(value)} ({pct}%)</small>
                 </div>
               </li>
             )
           })}
         </ul>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
 function MonthlyTrendChart({ items = [] }) {
   if (!items.length) {
     return (
-      <div className="card chart-card">
-        <h3>Monthly Income vs Expense</h3>
-        <p className="muted">Upload transactions to see monthly trends.</p>
-      </div>
+      <Card>
+        <CardTitle>Monthly Income vs Expense</CardTitle>
+        <CardDescription>Upload transactions to see monthly trends.</CardDescription>
+      </Card>
     )
   }
 
@@ -527,28 +643,51 @@ function MonthlyTrendChart({ items = [] }) {
   )
 
   return (
-    <div className="card chart-card">
-      <h3>Monthly Income vs Expense</h3>
-      <div className="monthly-bars">
-        {items.map((m) => {
-          const incomePct = (Number(m.total_in || 0) / maxValue) * 100
-          const expensePct = (Number(m.total_out || 0) / maxValue) * 100
-          return (
-            <div key={m.month} className="monthly-row">
-              <div className="monthly-label">{m.month}</div>
-              <div className="monthly-track">
-                <div className="income-bar" style={{ width: `${Math.max(2, incomePct)}%` }} />
-                <div className="expense-bar" style={{ width: `${Math.max(2, expensePct)}%` }} />
+    <Card>
+      <CardHeader>
+        <CardTitle>Monthly Income vs Expense</CardTitle>
+        <CardDescription>Track how inflows and outflows evolve over time.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-5">
+          {items.map((m) => {
+            const incomePct = (Number(m.total_in || 0) / maxValue) * 100
+            const expensePct = (Number(m.total_out || 0) / maxValue) * 100
+            return (
+              <div key={m.month} className="grid gap-3 lg:grid-cols-[110px_1fr] lg:items-center">
+                <div className="text-sm font-semibold text-text-primary">{m.month}</div>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs uppercase tracking-[0.18em] text-text-muted">
+                      <span>Income</span>
+                      <span>{formatINR(m.total_in)}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-bg-secondary">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-zinc-300 to-white"
+                        style={{ width: `${Math.max(2, incomePct)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs uppercase tracking-[0.18em] text-text-muted">
+                      <span>Expense</span>
+                      <span>{formatINR(m.total_out)}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-bg-secondary">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-zinc-700 to-zinc-400"
+                        style={{ width: `${Math.max(2, expensePct)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="monthly-values">
-                <span>In {formatINR(m.total_in)}</span>
-                <span>Out {formatINR(m.total_out)}</span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -807,260 +946,334 @@ export default function App() {
 
   if (!token) {
     return (
-      <div className="auth-page">
-        <div className="auth-layout">
-          <div className="card auth-copy">
-            <h1>Personal Finance Copilot</h1>
-            <p>
-              Analyze spending with charts, discuss with AI, and download comprehensive reports.
-            </p>
-            <ul>
-              <li>Home dashboard with month/year or all-time filtering</li>
-              <li>AI feature chat for finance questions</li>
-              <li>Downloadable reports with detailed finance insights</li>
-            </ul>
+      <div className="min-h-screen bg-bg-primary px-5 py-8 lg:px-8 lg:py-10">
+        <Container>
+          <div className="grid gap-6 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <Card className="bg-gradient-to-br from-bg-secondary to-bg-elevated">
+              <CardHeader className="max-w-2xl">
+                <p className="label-text">Personal Finance Copilot</p>
+                <h1 className="text-4xl font-semibold tracking-[0.06em] text-text-primary lg:text-5xl">
+                  Premium insights for every rupee you earn, spend, and save.
+                </h1>
+                <CardDescription className="text-base leading-7">
+                  Analyze spending with charts, discuss with AI, and download comprehensive reports.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="grid gap-4 text-sm leading-7 text-text-secondary">
+                  <li className="surface-muted rounded-2xl p-4">Home dashboard with month/year or all-time filtering</li>
+                  <li className="surface-muted rounded-2xl p-4">AI feature chat for finance questions</li>
+                  <li className="surface-muted rounded-2xl p-4">Downloadable reports with detailed finance insights</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <AuthCard
+              mode={authMode}
+              onModeChange={(m) => setAuthMode(m)}
+              onLoginSuccess={onLoginSuccess}
+            />
           </div>
-          <AuthCard
-            mode={authMode}
-            onModeChange={(m) => setAuthMode(m)}
-            onLoginSuccess={onLoginSuccess}
-          />
-        </div>
+        </Container>
       </div>
     )
   }
 
   return (
-    <div className="app-shell">
-      <nav className="top-nav">
-        <div className="brand">Finance Copilot</div>
-        <div className="nav-links">
-          <button className={`nav-tab ${activePage === 'home' ? 'active' : ''}`} onClick={() => setActivePage('home')}>Home</button>
-          <button className={`nav-tab ${activePage === 'ai' ? 'active' : ''}`} onClick={() => setActivePage('ai')}>AI Feature</button>
-        </div>
-        <div className="nav-user">
-          <span>{user?.full_name || user?.email}</span>
-          <button className="secondary-btn" onClick={logout}>Logout</button>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-bg-primary">
+      <header className="sticky top-0 z-20 border-b border-border-subtle bg-black/85 backdrop-blur-xl">
+        <Container className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="label-text">Finance Copilot</p>
+            <p className="mt-2 text-sm text-text-secondary">Premium command center for your money.</p>
+          </div>
 
-      <div className="page">
-        {activePage === 'home' && (
-          <>
-            <div className="welcome-row card">
-              <h1>Home Dashboard</h1>
-              <p>Filter data by month-year or all-time, upload statements, and review professional reports.</p>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+            <div className="flex items-center gap-2 rounded-2xl border border-border-subtle bg-bg-secondary p-1">
+              <Button variant={activePage === 'home' ? 'primary' : 'ghost'} onClick={() => setActivePage('home')}>
+                Home
+              </Button>
+              <Button variant={activePage === 'ai' ? 'primary' : 'ghost'} onClick={() => setActivePage('ai')}>
+                AI Feature
+              </Button>
             </div>
 
-            <div className="card">
-              <h3>Scope & Controls</h3>
-              <div className="row">
-                <label>
-                  Select Period
-                  <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)}>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <span className="text-sm text-text-secondary">{user?.full_name || user?.email}</span>
+              <Button variant="secondary" onClick={logout}>Logout</Button>
+            </div>
+          </div>
+        </Container>
+      </header>
+
+      <Container className="py-8 lg:py-10">
+        {activePage === 'home' && (
+          <Section>
+            <SectionIntro
+              eyebrow="Home Dashboard"
+              title="A cleaner view of your financial pulse"
+              description="Filter data by month-year or all-time, upload statements, and review professional reports in a premium dark workspace."
+            />
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Scope & Controls</CardTitle>
+                <CardDescription>
+                  Showing data for: <strong className="text-text-primary">{selectedPeriod === 'all' ? 'All Time' : monthLabel(selectedPeriod)}</strong>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-5 lg:grid-cols-2">
+                <Field label="Select Period">
+                  <Select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)}>
                     {monthOptions.map((m) => (
                       <option key={m} value={m}>{m === 'all' ? 'All Time' : monthLabel(m)}</option>
                     ))}
-                  </select>
-                </label>
-                <label>
-                  Income Growth % (forecast)
-                  <input type="number" value={incomeGrowth} onChange={(e) => setIncomeGrowth(e.target.value)} />
-                </label>
-              </div>
-              <p className="muted">
-                Showing data for: <strong>{selectedPeriod === 'all' ? 'All Time' : monthLabel(selectedPeriod)}</strong>
-              </p>
-            </div>
+                  </Select>
+                </Field>
+                <Field label="Income Growth % (forecast)">
+                  <Input type="number" value={incomeGrowth} onChange={(e) => setIncomeGrowth(e.target.value)} />
+                </Field>
+              </CardContent>
+            </Card>
 
-            <div className="card">
-              <h3>Upload Data (CSV or Text)</h3>
-              <div className="upload-grid">
-                <div className="upload-card-lite">
-                  <h4>Upload Bank CSV</h4>
-                  <p className="muted">Best for bulk transaction uploads from statement exports.</p>
-                  <input type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files?.[0] || null)} />
-                  <button onClick={uploadCsv} disabled={!csvFile}>Upload CSV</button>
+            <Card>
+              <CardHeader>
+                <CardTitle>Upload Data</CardTitle>
+                <CardDescription>Upload CSV files or paste statement text for parsing.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-5 xl:grid-cols-2">
+                <div className="surface-muted rounded-2xl p-5">
+                  <div className="space-y-2">
+                    <p className="label-text">Upload Bank CSV</p>
+                    <h4 className="text-lg font-semibold text-text-primary">Bulk transaction imports</h4>
+                    <p className="text-sm leading-6 text-text-secondary">Best for statement exports and structured history uploads.</p>
+                  </div>
+                  <div className="mt-5 space-y-4">
+                    <Input type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files?.[0] || null)} />
+                    <Button onClick={uploadCsv} disabled={!csvFile}>Upload CSV</Button>
+                  </div>
                 </div>
 
-                <div className="upload-card-lite">
-                  <h4>Paste Statement Text</h4>
-                  <p className="muted">Paste OCR or copied statement lines and let parser structure them.</p>
-                  <textarea
-                    rows={6}
-                    value={statementText}
-                    onChange={(e) => setStatementText(e.target.value)}
-                    placeholder="Paste transaction lines..."
-                  />
-                  <button onClick={uploadStatementText} disabled={!statementText.trim()}>Upload Text</button>
+                <div className="surface-muted rounded-2xl p-5">
+                  <div className="space-y-2">
+                    <p className="label-text">Paste Statement Text</p>
+                    <h4 className="text-lg font-semibold text-text-primary">OCR-friendly parser</h4>
+                    <p className="text-sm leading-6 text-text-secondary">Paste OCR or copied statement lines and let the parser structure them.</p>
+                  </div>
+                  <div className="mt-5 space-y-4">
+                    <Textarea
+                      rows={6}
+                      value={statementText}
+                      onChange={(e) => setStatementText(e.target.value)}
+                      placeholder="Paste transaction lines..."
+                    />
+                    <Button onClick={uploadStatementText} disabled={!statementText.trim()}>Upload Text</Button>
+                  </div>
                 </div>
-              </div>
-              {uploadMessage && <p className="muted">{uploadMessage}</p>}
-              {uploadTips.length > 0 && (
-                <div className="error-note">
-                  <strong>Parsing Tips:</strong>
-                  <ul>
-                    {uploadTips.map((tip, idx) => (
-                      <li key={idx}>{tip}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {uploadPreviewLines.length > 0 && (
-                <details className="ocr-preview">
-                  <summary>Text preview</summary>
-                  <pre>{uploadPreviewLines.join('\n')}</pre>
-                </details>
-              )}
+
+                {uploadMessage ? (
+                  <div className="xl:col-span-2 rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3 text-sm text-text-secondary">
+                    {uploadMessage}
+                  </div>
+                ) : null}
+
+                {uploadTips.length > 0 ? (
+                  <div className="xl:col-span-2 rounded-2xl border border-red-950 bg-red-950/20 p-4 text-sm text-red-200">
+                    <strong className="block text-xs uppercase tracking-[0.18em] text-red-300">Parsing Tips</strong>
+                    <ul className="mt-3 list-disc space-y-2 pl-5">
+                      {uploadTips.map((tip, idx) => (
+                        <li key={idx}>{tip}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {uploadPreviewLines.length > 0 ? (
+                  <details className="xl:col-span-2 rounded-2xl border border-border-subtle bg-bg-secondary p-4 text-sm text-text-secondary">
+                    <summary className="cursor-pointer font-semibold text-text-primary">Text preview</summary>
+                    <pre className="mt-4 whitespace-pre-wrap font-sans leading-7">{uploadPreviewLines.join('\n')}</pre>
+                  </details>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-5 lg:grid-cols-3">
+              <StatCard label="Total In" value={formatINR(summary.total_in)} />
+              <StatCard label="Total Out" value={formatINR(summary.total_out)} />
+              <StatCard label="Net Savings" value={formatINR(summary.net_savings)} />
             </div>
 
-            <div className="metrics-grid">
-              <div className="metric-card">
-                <span>Total In</span>
-                <strong>{formatINR(summary.total_in)}</strong>
-              </div>
-              <div className="metric-card">
-                <span>Total Out</span>
-                <strong>{formatINR(summary.total_out)}</strong>
-              </div>
-              <div className="metric-card">
-                <span>Net Savings</span>
-                <strong>{formatINR(summary.net_savings)}</strong>
-              </div>
-            </div>
-
-            <div className="grid">
-              <ExpensePieChart
-                title="Expense Distribution (Pie)"
-                items={categories}
-              />
+            <div className="grid gap-5 xl:grid-cols-2">
+              <ExpensePieChart title="Expense Distribution (Pie)" items={categories} />
               <HorizontalBars
                 title="Spending by Category"
                 items={categories.slice(0, 8)}
                 labelKey="category"
                 valueKey="amount"
               />
-              <MonthlyTrendChart items={monthlyForChart} />
             </div>
 
-            <div className="grid insights-grid">
-              <div className="card chart-card">
-                <h3>Top Expenses</h3>
-                {topExpenses.length ? (
-                  <ul className="insight-list">
-                    {topExpenses.map((item, idx) => (
-                      <li key={`${item.description}-${idx}`}>
-                        <div>
-                          <strong>{item.description}</strong>
-                          <span>{item.date}</span>
-                        </div>
-                        <b>{formatINR(item.amount)}</b>
-                      </li>
+            <MonthlyTrendChart items={monthlyForChart} />
+
+            <div className="grid gap-5 xl:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top Expenses</CardTitle>
+                  <CardDescription>Largest expense transactions in the selected scope.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {topExpenses.length ? (
+                    <ul className="grid gap-3">
+                      {topExpenses.map((item, idx) => (
+                        <li key={`${item.description}-${idx}`} className="surface-muted flex items-center justify-between gap-4 rounded-2xl p-4">
+                          <div className="space-y-1">
+                            <strong className="block text-sm font-semibold text-text-primary">{item.description}</strong>
+                            <span className="text-xs text-text-muted">{item.date}</span>
+                          </div>
+                          <b className="whitespace-nowrap text-sm font-semibold text-text-primary">{formatINR(item.amount)}</b>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-text-secondary">No top expenses yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Detailed Insights</CardTitle>
+                  <CardDescription>Summarized observations from the current selection.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="grid gap-3">
+                    {insights.map((line, idx) => (
+                      <li key={idx} className="surface-muted rounded-2xl p-4 text-sm font-medium text-text-primary">{line}</li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="muted">No top expenses yet.</p>
-                )}
-              </div>
-
-              <div className="card chart-card">
-                <h3>Detailed Insights</h3>
-                <ul className="insight-list">
-                  {insights.map((line, idx) => (
-                    <li key={idx}><div><strong>{line}</strong></div></li>
-                  ))}
-                </ul>
-              </div>
+                </CardContent>
+              </Card>
             </div>
 
-            <div className="grid">
+            <div className="grid gap-5 xl:grid-cols-2">
               <ForecastCard forecast={forecast} />
               <SavingsPlanCard plan={plan} />
             </div>
 
-            <div className="card">
-              <h3>Reports, Settings & Actions</h3>
-              <div className="row">
-                <label>
-                  Target Savings (₹)
-                  <input type="number" value={targetSavings} onChange={(e) => setTargetSavings(e.target.value)} />
-                </label>
-                <div className="muted settings-note">AI model is managed automatically from your saved backend settings.</div>
-              </div>
-              <div className="button-row">
-                <button onClick={saveSettings}>Save Settings</button>
-                <button className="secondary-btn" onClick={() => downloadWithAuth('/user/reports/transactions.csv', 'transactions_report.csv')}>Download CSV</button>
-                <button
-                  className="secondary-btn"
-                  onClick={() => downloadWithAuth(`/user/reports/summary.pdf?period=${encodeURIComponent(selectedPeriod)}`, 'finance_summary_report.pdf')}
-                >
-                  Download Full PDF Report
-                </button>
-                <button className="danger-btn" onClick={clearHistory}>Clear History</button>
-              </div>
-              {error && <p className="error-text">{error}</p>}
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Reports, Settings & Actions</CardTitle>
+                <CardDescription>Persist preferences and export finance reports.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.8fr)]">
+                  <Field label="Target Savings (₹)">
+                    <Input type="number" value={targetSavings} onChange={(e) => setTargetSavings(e.target.value)} />
+                  </Field>
+                  <div className="rounded-2xl border border-dashed border-border-subtle bg-bg-secondary p-4 text-sm leading-6 text-text-secondary">
+                    AI model is managed automatically from your saved backend settings.
+                  </div>
+                </div>
 
-            <div className="card">
-              <h3>Transactions ({filteredTransactions.length})</h3>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Description</th>
-                      <th>Debit</th>
-                      <th>Credit</th>
-                      <th>Source</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTransactions.map((t) => (
-                      <tr key={t.id}>
-                        <td>{t.date}</td>
-                        <td>{t.description}</td>
-                        <td>{formatINR(t.debit)}</td>
-                        <td>{formatINR(t.credit)}</td>
-                        <td>{t.source_type}</td>
+                <div className="flex flex-wrap gap-3">
+                  <Button onClick={saveSettings}>Save Settings</Button>
+                  <Button variant="secondary" onClick={() => downloadWithAuth('/user/reports/transactions.csv', 'transactions_report.csv')}>
+                    Download CSV
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => downloadWithAuth(`/user/reports/summary.pdf?period=${encodeURIComponent(selectedPeriod)}`, 'finance_summary_report.pdf')}
+                  >
+                    Download Full PDF Report
+                  </Button>
+                  <Button variant="danger" onClick={clearHistory}>Clear History</Button>
+                </div>
+
+                {error ? <p className="text-sm text-red-300">{error}</p> : null}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Transactions ({filteredTransactions.length})</CardTitle>
+                <CardDescription>Detailed ledger view for the current scope.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="table-shell overflow-x-auto">
+                  <table className="min-w-full text-left text-sm text-text-secondary">
+                    <thead className="border-b border-border-subtle text-xs uppercase tracking-[0.18em] text-text-muted">
+                      <tr>
+                        <th className="px-4 py-4">Date</th>
+                        <th className="px-4 py-4">Description</th>
+                        <th className="px-4 py-4">Debit</th>
+                        <th className="px-4 py-4">Credit</th>
+                        <th className="px-4 py-4">Source</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
+                    </thead>
+                    <tbody>
+                      {filteredTransactions.map((t) => (
+                        <tr key={t.id} className="border-b border-border-subtle/80 last:border-b-0">
+                          <td className="px-4 py-4">{t.date}</td>
+                          <td className="px-4 py-4 text-text-primary">{t.description}</td>
+                          <td className="px-4 py-4">{formatINR(t.debit)}</td>
+                          <td className="px-4 py-4">{formatINR(t.credit)}</td>
+                          <td className="px-4 py-4">{t.source_type}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </Section>
         )}
 
         {activePage === 'ai' && (
-          <>
-            <div className="welcome-row card">
-              <h1>AI Feature</h1>
-              <p>Chat with your finance assistant about expenses, budgets, and savings strategy.</p>
-            </div>
+          <Section>
+            <SectionIntro
+              eyebrow="AI Feature"
+              title="Discuss your money with context-aware assistance"
+              description="Chat with your finance assistant about expenses, budgets, and savings strategy with the current scope applied automatically."
+            />
 
-            <div className="card ai-chat-card">
-              <div className="chat-window">
-                {chatMessages.map((m, idx) => (
-                  <div key={idx} className={`chat-bubble ${m.role}`}>
-                    <strong>{m.role === 'assistant' ? 'AI' : 'You'}</strong>
-                    <p>{m.text}</p>
-                  </div>
-                ))}
-                {chatLoading && <p className="muted">AI is typing...</p>}
-              </div>
-              <form className="chat-form" onSubmit={sendChat}>
-                <input
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Ask about your spending, saving strategy, or monthly trends..."
-                />
-                <button type="submit" disabled={chatLoading || !chatInput.trim()}>Send</button>
-              </form>
-            </div>
-          </>
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Conversation</CardTitle>
+                <CardDescription>Ask about your spending, saving strategy, or monthly trends.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid max-h-[520px] min-h-[340px] gap-4 overflow-y-auto rounded-2xl border border-border-subtle bg-bg-secondary p-4">
+                  {chatMessages.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className={`max-w-[85%] rounded-2xl border px-4 py-3 ${
+                        m.role === 'assistant'
+                          ? 'border-border-subtle bg-bg-elevated text-text-primary'
+                          : 'justify-self-end border-zinc-700 bg-white text-black'
+                      }`}
+                    >
+                      <strong className="text-xs uppercase tracking-[0.18em] opacity-70">
+                        {m.role === 'assistant' ? 'AI' : 'You'}
+                      </strong>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{m.text}</p>
+                    </div>
+                  ))}
+                  {chatLoading ? <p className="text-sm text-text-secondary">AI is typing...</p> : null}
+                </div>
+
+                <form className="grid gap-3 lg:grid-cols-[1fr_auto]" onSubmit={sendChat}>
+                  <Input
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Ask about your spending, saving strategy, or monthly trends..."
+                  />
+                  <Button type="submit" disabled={chatLoading || !chatInput.trim()}>Send</Button>
+                </form>
+              </CardContent>
+            </Card>
+          </Section>
         )}
-
-      </div>
+      </Container>
     </div>
   )
 }
